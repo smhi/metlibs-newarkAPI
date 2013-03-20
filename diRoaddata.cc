@@ -68,7 +68,7 @@ int road::Roaddata::initRoaddata(const miString &databasefile)
 	
 	if (initDone)
 		return 1;
-    ifstream ifs(databasefile.cStr(),ios::in);
+    ifstream ifs(databasefile.c_str(),ios::in);
 	vector<miString> token;
     char buf[255];
 	if (ifs.is_open())
@@ -249,18 +249,18 @@ int road::Roaddata::initData(const vector<miString> & parameternames, map<int, m
 				char buf[1024];
 				if ((*stations)[i].station_type() == road::diStation::WMO)
 				{
-					sprintf(buf, "%d %s %s %f %f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().cStr(), (char *)obstime_.isoClock(true,true).cStr(),  (*stations)[i].lat(), (*stations)[i].lon());
+					sprintf(buf, "%d %s %s %f %f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 				}
 				else if ((*stations)[i].station_type() == road::diStation::ICAO)
 				{
-					sprintf(buf, "%s %s %s %f %f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().cStr(), (char *)obstime_.isoClock(true,true).cStr(),  (*stations)[i].lat(), (*stations)[i].lon());
+					sprintf(buf, "%s %s %s %f %f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 				}
 				else if ((*stations)[i].station_type() == road::diStation::SHIP)
 				{
 					miString call_sign_ = (*stations)[i].call_sign();
 					call_sign_.trim(true, true, " ");
 					call_sign_.replace(" ", "_");
-					sprintf(buf, "%s %s %s %f %f", call_sign_.c_str(), (char *)obstime_.isoDate().cStr(), (char *)obstime_.isoClock(true,true).cStr(),  (*stations)[i].lat(), (*stations)[i].lon());
+					sprintf(buf, "%s %s %s %f %f", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 				}
 				miString line(buf);
 				for (j = 0; j < tmpresult.size(); j++)
@@ -278,7 +278,7 @@ int road::Roaddata::initData(const vector<miString> & parameternames, map<int, m
 		{
 
 			char buf[1024];
-			sprintf(buf, "%d %s %s %f %f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().cStr(), (char *)obstime_.isoClock(true,true).cStr(),  (*stations)[i].lat(), (*stations)[i].lon());
+			sprintf(buf, "%d %s %s %f %f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 			miString line(buf);
 			for (j = 0; j < tmpresult.size(); j++)
 			{
@@ -579,7 +579,7 @@ retry:
 				if (itm != diStation::dataproviders[stationfile_].end())
 				{
 					// station already in map
-					strcpy(place_id, itm->second.cStr());
+					strcpy(place_id, itm->second.c_str());
 				}
 				else
 				{
@@ -610,8 +610,8 @@ retry:
 (SELECT ai.wmo_block_number AS wmo_block, ai.wmo_station_number AS wmo_number, ai.wmo_station_name AS station_name, round(st_y(sop.stationary_position)::numeric, 2) AS lat, round(st_x(sop.stationary_position)::numeric, 2) AS lon, sop.position_id, ai.validtime_from, ai.validtime_to, round(st_z(sop.stationary_position)::numeric, 2) AS height_above_mean_sea_level, sop.barometer_height \
 FROM wmo_station_identity_view ai, stationary_observation_place_view sop, position_view p \
 WHERE ai.position_id = sop.position_id AND sop.position_id = p.position_id) AS diana_wmo_station_view \
-WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.isoTime(true,true).cStr(), wmo_block, wmo_station);
-						//sprintf(query, "select * from kvalobs_wmo_station_view where validtime_to>'%s' and wmo_block=%d and wmo_number=%d;", (char *)obstime_.isoTime(true,true).cStr(), wmo_block, wmo_station);
+WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.isoTime(true,true).c_str(), wmo_block, wmo_station);
+						//sprintf(query, "select * from kvalobs_wmo_station_view where validtime_to>'%s' and wmo_block=%d and wmo_number=%d;", (char *)obstime_.isoTime(true,true).c_str(), wmo_block, wmo_station);
 #ifdef DEBUGSQL
 						cerr << "query: " << query << endl;
 #endif
@@ -696,7 +696,7 @@ WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.i
 FROM wmo_station_identity_view wmo, aerosond_observation_value_view val, aerosond_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_parameter_view lp \
 WHERE wmo.position_id = ctx.position_id AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND lp.level_parameter_id = val.level_parameter_id) \
 AS diana_aerosond_observation_wiew where position_id in (%s) and parameter_id in(%s) and reference_time >= '%s' and reference_time <= '%s';",
-							(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)reftime_begin.isoTime(true,true).cStr(), (char *)reftime_end.isoTime(true,true).cStr());
+							(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)reftime_begin.isoTime(true,true).c_str(), (char *)reftime_end.isoTime(true,true).c_str());
 #ifdef DEBUGSQL
 					cerr << "query: " << query << endl;
 #endif
@@ -750,7 +750,7 @@ AS diana_aerosond_observation_wiew where position_id in (%s) and parameter_id in
 							strcpy(crow.validtimefrom,row[ valid_from ].c_str());
 							strcpy(crow.validtimeto,row[ valid_to ].c_str());
 							// Here is a fix to avoid the +- one hour problem...
-							strcpy(crow.reftime,(char *)obstime_.isoTime(true,true).cStr());
+							strcpy(crow.reftime,(char *)obstime_.isoTime(true,true).c_str());
 							// We must add 1000 to this
 							row[ level_parameter_id ].to(crow.srid);
 							crow.srid=crow.srid + 1000;

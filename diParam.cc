@@ -69,7 +69,7 @@ int road::diParam::initParameters(const miutil::miString &headerfile)
 	if (its == road::diParam::params_map.end())
 	{
 		char pbuf[255];
-		ifstream pifs(headerfile.cStr(),ios::in);
+		ifstream pifs(headerfile.c_str(),ios::in);
 		if (pifs.is_open())
 		{ 
 			/* Allocate the new vector and set */
@@ -285,7 +285,7 @@ miString road::diParam::fixstat(const miString & stat)
 
 long road::diParam::fixage(miString & age)
 {
-  char * cage = (char *)age.cStr();
+  char * cage = (char *)age.c_str();
   // Check for default first
   if (age == "*")
 	  return LONG_MAX;

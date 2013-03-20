@@ -180,11 +180,11 @@ retry:
 			char query[10240];
 			if ((*stations)[i].station_type() == road::diStation::WMO)
 			{
-				sprintf(buf, "%d %s %s %f %f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().cStr(), (char *)obstime_.isoClock(true,true).cStr(),  (*stations)[i].lat(), (*stations)[i].lon());
+				sprintf(buf, "%d %s %s %f %f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 			}
 			else if ((*stations)[i].station_type() == road::diStation::ICAO)
 			{
-				sprintf(buf, "%s %s %s %f %f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().cStr(), (char *)obstime_.isoClock(true,true).cStr(),  (*stations)[i].lat(), (*stations)[i].lon());
+				sprintf(buf, "%s %s %s %f %f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 			}
 			else if ((*stations)[i].station_type() == road::diStation::SHIP)
 			{
@@ -192,7 +192,7 @@ retry:
 				miString call_sign_ = (*stations)[i].call_sign();
 				call_sign_.trim(true, true, " ");
 				call_sign_.replace(" ", "_");
-				sprintf(buf, "%s %s %s", call_sign_.c_str(), (char *)obstime_.isoDate().cStr(), (char *)obstime_.isoClock(true,true).cStr());
+				sprintf(buf, "%s %s %s", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str());
 			}
 			miString line(buf);
 
@@ -232,7 +232,7 @@ retry:
 					if (itm != diStation::dataproviders[stationfile_].end())
 					{
 						// station already in map
-						strcpy(place_id, itm->second.cStr());
+						strcpy(place_id, itm->second.c_str());
 					}
 					else
 					{
@@ -262,7 +262,7 @@ retry:
 									(SELECT ai.wmo_block_number AS wmo_block, ai.wmo_station_number AS wmo_number, ai.wmo_station_name AS station_name, round(st_y(sop.stationary_position)::numeric, 2) AS lat, round(st_x(sop.stationary_position)::numeric, 2) AS lon, sop.position_id, ai.validtime_from, ai.validtime_to, round(st_z(sop.stationary_position)::numeric, 2) AS height_above_mean_sea_level, sop.barometer_height \
 									FROM wmo_station_identity_view ai, stationary_observation_place_view sop, position_view p \
 									WHERE ai.position_id = sop.position_id AND sop.position_id = p.position_id) AS diana_wmo_station_view \
-									WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.isoTime(true,true).cStr(), wmo_block, wmo_station);
+									WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.isoTime(true,true).c_str(), wmo_block, wmo_station);
 							}
 							else if ((*stations)[i].station_type() == road::diStation::ICAO)
 							{
@@ -274,7 +274,7 @@ retry:
 									(SELECT ai.icao_code AS icao_code, ai.icao_station_name AS station_name, round(st_y(sop.stationary_position)::numeric, 2) AS lat, round(st_x(sop.stationary_position)::numeric, 2) AS lon, sop.position_id, ai.validtime_from, ai.validtime_to, round(st_z(sop.stationary_position)::numeric, 2) AS height_above_mean_sea_level, sop.barometer_height \
 									FROM icao_station_identity_view ai, stationary_observation_place_view sop, position_view p \
 									WHERE ai.position_id = sop.position_id AND sop.position_id = p.position_id) AS diana_icao_station_view \
-									WHERE validtime_to>'%s' AND icao_code = '%s';", (char *)obstime_.isoTime(true,true).cStr(), icaoid.cStr());
+									WHERE validtime_to>'%s' AND icao_code = '%s';", (char *)obstime_.isoTime(true,true).c_str(), icaoid.c_str());
 							}
 							else if ((*stations)[i].station_type() == road::diStation::SHIP)
 							{
@@ -284,7 +284,7 @@ retry:
 								sprintf(query,
 									"SELECT ship.ship_id AS ship_id, ship.sender_id AS sender_id \
 									FROM ship_view ship \
-									WHERE ship.ship_id = '%s';", callsign.cStr());
+									WHERE ship.ship_id = '%s';", callsign.c_str());
 							}
 
 #ifdef DEBUGPRINT
@@ -487,7 +487,7 @@ retry:
 FROM wmo_station_identity_view wmo, stationary_observation_place_view pos, stationary_observation_value_view val, stationary_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_combination_view lc, level_parameter_view lp \
 WHERE wmo.position_id = pos.position_id AND wmo.position_id = ctx.position_id AND val.real_time_store=true AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND lc.level_combination_id = ctx.level_combination_id AND lp.level_parameter_id = lc.level_parameter_id) \
 AS diana_wmo_observation_wiew where observation_master_id in (%s) and reference_time='%s';",
-									observation_master_ids, (char *)obstime_.isoTime(true,true).cStr());
+									observation_master_ids, (char *)obstime_.isoTime(true,true).c_str());
 							}
 							else
 							{
@@ -497,7 +497,7 @@ AS diana_wmo_observation_wiew where observation_master_id in (%s) and reference_
 FROM wmo_station_identity_view wmo, stationary_observation_place_view pos, stationary_observation_value_view val, stationary_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_combination_view lc, level_parameter_view lp \
 WHERE wmo.position_id = pos.position_id AND wmo.position_id = ctx.position_id AND val.real_time_store=true AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND lc.level_combination_id = ctx.level_combination_id AND lp.level_parameter_id = lc.level_parameter_id) \
 AS diana_wmo_observation_wiew where position_id in(%s) and parameter_id in(%s) and reference_time='%s';",
-									(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).cStr());
+									(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str());
 							}
 						}
 						else if ((*stations)[i].station_type() == road::diStation::ICAO)
@@ -510,7 +510,7 @@ AS diana_wmo_observation_wiew where position_id in(%s) and parameter_id in(%s) a
 							refClock.setClock(refClock.hour(),0,0);
 							refTime.setTime(refDate, refClock);
 							refTime.addHour(+1);
-							//cerr << "obstime,reftime: " << (char *)obstime_.isoTime(true,true).cStr()<< ", " << (char *)refTime.isoTime(true,true).cStr()<< endl;
+							//cerr << "obstime,reftime: " << (char *)obstime_.isoTime(true,true).c_str()<< ", " << (char *)refTime.isoTime(true,true).c_str()<< endl;
 							if (strlen(observation_master_ids))
 							{
 								sprintf(query,
@@ -519,7 +519,7 @@ AS diana_wmo_observation_wiew where position_id in(%s) and parameter_id in(%s) a
 FROM icao_station_identity_view icao, stationary_observation_place_view pos, stationary_observation_value_view val, stationary_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_combination_view lc, level_parameter_view lp \
 WHERE icao.position_id = pos.position_id AND icao.position_id = ctx.position_id AND val.real_time_store=true AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND lc.level_combination_id = ctx.level_combination_id AND lp.level_parameter_id = lc.level_parameter_id) \
 AS diana_icao_observation_wiew where observation_master_id in (%s) and valid_to='%s'and reference_time='%s';",
-									observation_master_ids, (char *)obstime_.isoTime(true,true).cStr(),(char *)refTime.isoTime(true,true).cStr());
+									observation_master_ids, (char *)obstime_.isoTime(true,true).c_str(),(char *)refTime.isoTime(true,true).c_str());
 							}
 							else
 							{
@@ -529,7 +529,7 @@ AS diana_icao_observation_wiew where observation_master_id in (%s) and valid_to=
 FROM icao_station_identity_view icao, stationary_observation_place_view pos, stationary_observation_value_view val, stationary_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_combination_view lc, level_parameter_view lp \
 WHERE icao.position_id = pos.position_id AND icao.position_id = ctx.position_id AND val.real_time_store=true AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND lc.level_combination_id = ctx.level_combination_id AND lp.level_parameter_id = lc.level_parameter_id) \
 AS diana_wmo_observation_wiew where position_id in(%s) and parameter_id in(%s) and valid_to='%s'and reference_time='%s';",
-									(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).cStr(),(char *)refTime.isoTime(true,true).cStr());
+									(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str(),(char *)refTime.isoTime(true,true).c_str());
 							}
 						}
 						else if ((*stations)[i].station_type() == road::diStation::SHIP)
@@ -542,7 +542,7 @@ AS diana_wmo_observation_wiew where position_id in(%s) and parameter_id in(%s) a
 FROM ship_view ship, ship_observation_value_view val, ship_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_parameter_view lp, level_combination_view lc \
 WHERE ship.sender_id = ctx.sender_id AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND ctx.level_combination_id = lc.level_combination_id AND lc.level_parameter_id = lp.level_parameter_id) \
 AS diana_ship_observation_wiew where observation_master_id in (%s) and reference_time='%s';",
-									observation_master_ids, (char *)obstime_.isoTime(true,true).cStr());
+									observation_master_ids, (char *)obstime_.isoTime(true,true).c_str());
 							}
 							else
 							{
@@ -552,7 +552,7 @@ AS diana_ship_observation_wiew where observation_master_id in (%s) and reference
 FROM ship_view ship, ship_observation_value_view val, ship_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_parameter_view lp, level_combination_view lc \
 WHERE ship.sender_id = ctx.sender_id AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND ctx.level_combination_id = lc.level_combination_id AND lc.level_parameter_id = lp.level_parameter_id) \
 AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) and reference_time='%s';",
-									(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).cStr());
+									(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str());
 							}
 
 						}

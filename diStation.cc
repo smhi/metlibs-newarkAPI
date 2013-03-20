@@ -68,7 +68,7 @@ int road::diStation::initStations(miString stationfile)
 	{
 		vector <diStation> * stations = new vector <diStation>;
 		char buf[255];
-		ifstream ifs(stationfile.cStr(),ios::in);
+		ifstream ifs(stationfile.c_str(),ios::in);
 		if (ifs.is_open())
 		{ 
 			int j = 0;
