@@ -39,7 +39,7 @@
 #include <map>
 #include <string>
 #include <puTools/miTime.h>
-#include <puTools/miString.h>
+#include <puTools/miStringFunctions.h>
 #include <newarkAPI/diStation.h>
 #include <newarkAPI/diParam.h>
 #include <newarkAPI/diRoaddatathread.h>
@@ -64,15 +64,15 @@ namespace road {
 
 class Roaddata {
 private:
-	static miString host;
-	static miString port;
-	static miString dbname;
-	static miString user;
-	static miString passwd;
+	static string host;
+	static string port;
+	static string dbname;
+	static string user;
+	static string passwd;
 	static std::string connect_str;
-	miString databasefile_;
-	miString stationfile_;
-	miString parameterfile_;
+	string databasefile_;
+	string stationfile_;
+	string parameterfile_;
 	miTime obstime_;
 	vector<diStation> * stations;
 	vector <diParam> * params;
@@ -81,23 +81,27 @@ private:
 	
 public:
     static bool initDone;
-	static int initRoaddata(const miString &databasefile);
+	static int initRoaddata(const string &databasefile);
+	// getStationList must be called after initRoaddata has been done, if not, there will be no connect information.
+	// Maybe this should be fixed in the future ?
+	static int getStationList(string & inquery, vector <diStation> * & stations, const string &station_type);
 	//static DbConnectionPoolPtr thePool;
 
 	// this map maps an obstime to a map from wmo no to a data string.
 	// the second map contains data strings only if there are rows returned 
 	// from road.
-	static map<miTime, map<int, miString > > road_cache;
+	static map<miTime, map<int, string > > road_cache;
 	static map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > road_multi_cache;
 	//default constructor
 	Roaddata() {}
+	
 // the constructor, it inits the databasesetting, includeing login and password
-	Roaddata(const miString &databasefile, const miString &stationfile, const miString &parameterfile, const miTime &obstime);
+	Roaddata(const string &databasefile, const string &stationfile, const string &parameterfile, const miTime &obstime);
     ~Roaddata();
 	int open();
-	int getData(const vector<diStation> & stations_to_plot, map<int, miString> & lines);
+	int getData(const vector<diStation> & stations_to_plot, map<int, string> & lines);
 	int getData(const vector<diStation> & stations_to_plot, map<int, vector<RDKCOMBINEDROW_2 > > & raw_data_map);
-	int initData(const vector<miString> & parameternames, map<int, miString> & lines);
+	int initData(const vector<string> & parameternames, map<int, string> & lines);
 	int close();
 };
 

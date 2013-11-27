@@ -29,7 +29,7 @@
 */
 #ifndef __diParam_h__
 #define __diParam_h__
-#include <puTools/miString.h>
+#include <puTools/miStringFunctions.h>
 #include <puTools/miTime.h>
 #include <newarkAPI/rdkESQLTypes.h>
 #include <set>
@@ -59,9 +59,9 @@ namespace road{
 class diParam {
 private:
   /* First, the diana attributes */
-  miutil::miString diananame_;
-  miutil::miString description_;
-  miutil::miString comment_;
+  string diananame_;
+  string description_;
+  string comment_;
   /* The road attributes */
   int parameter_;
   double altitudefrom_;
@@ -72,38 +72,38 @@ private:
   /* offset from reftime to validtimeto, mostly 0 */
   long validtimetodelta_;
   /* unit in road */
-  miutil::miString unit_;
+  string unit_;
   /* dataversion, always 0 with the exception of EPS */
   int dataversion_;
   /* the stat type, e.g RDKInst */
-  miutil::miString statisticstype_;
-  static map<miutil::miString,miutil::miString> stat_type;
+  string statisticstype_;
+  static map<string,string> stat_type;
   
-  long fixage(miutil::miString & age);
-  miutil::miString fixstat(const miutil::miString & stat);
-  static map<miutil::miString,miutil::miString> unit_map;
+  long fixage(string & age);
+  string fixstat(const string & stat);
+  static map<string,string> unit_map;
   
-  miutil::miString toDianaUnit( const miutil::miString & roadunit);
+  string toDianaUnit( const string & roadunit);
   
 
  public:
-  static map<miutil::miString,miutil::miString> init_stat_type();
-  static map<miutil::miString,miutil::miString> init_unit_map();
+  static map<string,string> init_stat_type();
+  static map<string,string> init_unit_map();
   // this must be public
-  static map<miutil::miString, vector<diParam> * > params_map;
-  static map<miutil::miString, set<int> * > roadparams_map;
+  static map<string, vector<diParam> * > params_map;
+  static map<string, set<int> * > roadparams_map;
   /* the following is replaced to allow different parameter mappings */
   //static vector<diParam> params;
   //static set<int> roadparams;
-  static map<int, miutil::miString> index_column_map;
-  static int initParameters(const miutil::miString &headerfile);
+  static map<int, string> index_column_map;
+  static int initParameters(const string &headerfile);
   bool isCorrect;
   diParam() {}
-  diParam(const miutil::miString &line){ isCorrect = setParams(line);}
+  diParam(const string &line){ isCorrect = setParams(line);}
   diParam(
-	  const miutil::miString &diananame,
-	  const miutil::miString &description,
-	  const miutil::miString &comment,
+	  const string &diananame,
+	  const string &description,
+	  const string &comment,
 	  /* The road attributes */
 	  const int & parameter,
 	  const double & altitudefrom,
@@ -114,11 +114,11 @@ private:
 	  /* offset from reftime to validtimeto, mostly 0 */
 	  const long & validtimetodelta,
 	  /* unit in road */
-	  const miutil::miString &unit,
+	  const string &unit,
 	  /* dataversion, always 0 with the exception of EPS */
 	  const int & dataversion,
 	  /* the stat type, e.g RDKInst */
-	  const miutil::miString & statisticstype)
+	  const string & statisticstype)
 
       {
 	setParams(diananame,
@@ -137,9 +137,9 @@ private:
       }    
 
   bool setParams(
-	  const miutil::miString &diananame,
-	  const miutil::miString &description,
-	  const miutil::miString &comment,
+	  const string &diananame,
+	  const string &description,
+	  const string &comment,
 	  /* The road attributes */
 	  const int & parameter,
 	  const double & altitudefrom,
@@ -150,32 +150,32 @@ private:
 	  /* offset from reftime to validtimeto, mostly 0 */
 	  const long & validtimetodelta,
 	  /* unit in road */
-	  const miutil::miString &unit,
+	  const string &unit,
 	  /* dataversion, always 0 with the exception of EPS */
 	  const int & dataversion,
 	  /* the stat type, e.g RDKInst */
-	  const miutil::miString & statisticstype
+	  const string & statisticstype
 	   );
 
-  bool setParams(const miutil::miString &line);
+  bool setParams(const string &line);
   
   char* tableName() const {return "param";}
-  miutil::miString toSend() const;
+  string toSend() const;
   bool isMapped(const RDKCOMBINEDROW_2 & row);
   void convertValue(RDKCOMBINEDROW_2 & row);
  
-  miutil::miString diananame()const    { return diananame_;}
-  miutil::miString description() const { return description_;}
-  miutil::miString comment()const { return comment_;}
+  string diananame()const    { return diananame_;}
+  string description() const { return description_;}
+  string comment()const { return comment_;}
   int              parameter()const { return parameter_;}
   double altitudefrom()const { return altitudefrom_;}
   double altitudeto()const { return altitudeto_;}
   int srid()const { return srid_; }
   long validtimefromdelta() const { return validtimefromdelta_;}
   long validtimetodelta() const { return validtimetodelta_;}  
-  miutil::miString unit()const    { return unit_;}
+  string unit()const    { return unit_;}
   int dataversion() const { return dataversion_;}
-  miutil::miString statisticstype() const { return statisticstype_;} 
+  string statisticstype() const { return statisticstype_;} 
       
 };
 

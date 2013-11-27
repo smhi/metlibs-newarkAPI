@@ -38,6 +38,7 @@
 #include <string.h>
 #include <diParam.h>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <rdkAPI/rdkESQLTypes.h>
 #include <float.h>
@@ -51,19 +52,19 @@ using namespace std;
 using namespace miutil;
 using namespace road;
 
-map<miString,miString> road::diParam::stat_type = road::diParam::init_stat_type();
-map<miString,miString> road::diParam::unit_map = road::diParam::init_unit_map();
-map<int, miString> road::diParam::index_column_map;
-map<miString, vector<diParam> * > road::diParam::params_map;
-map<miString, set<int> * > road::diParam::roadparams_map;
+map<string,string> road::diParam::stat_type = road::diParam::init_stat_type();
+map<string,string> road::diParam::unit_map = road::diParam::init_unit_map();
+map<int, string> road::diParam::index_column_map;
+map<string, vector<diParam> * > road::diParam::params_map;
+map<string, set<int> * > road::diParam::roadparams_map;
 /* the following is replaced to allow different parameter mappings */
 //vector<diParam> road::diParam::params;
 //set<int> road::diParam::roadparams; 
 
-int road::diParam::initParameters(const miutil::miString &headerfile)
+int road::diParam::initParameters(const string &headerfile)
 {
 	// init iterator
-	map<miString, vector<diParam> * >::iterator its = road::diParam::params_map.begin();
+	map<string, vector<diParam> * >::iterator its = road::diParam::params_map.begin();
 	// search
 	its = road::diParam::params_map.find(headerfile);
 	if (its == road::diParam::params_map.end())
@@ -84,10 +85,10 @@ int road::diParam::initParameters(const miutil::miString &headerfile)
 					// Skip the header line 0
 					if (j == 1)
 			  {
-				  miString comment(pbuf);
+				  string comment(pbuf);
 				  //comment.trim("#");
-				  vector<miString> names=comment.split("\t",false);
-				  vector<miString>::iterator it=names.begin();
+				  vector<string> names=split(comment, "\t",false);
+				  vector<string>::iterator it=names.begin();
 				  int i = 0;
 				  diParam::index_column_map.clear();
 				  for(;it!=names.end(); it++){
@@ -100,10 +101,10 @@ int road::diParam::initParameters(const miutil::miString &headerfile)
 				}
 				else 
 				{
-					miString par(pbuf);
+					string par(pbuf);
 					// check if line is empty
-					miString tmp = par;
-					tmp.trim("\t");
+					string tmp = par;
+					trim(tmp,"\t");
 					if (tmp.size() > 0)
 					{
 						//cerr << par << endl;
@@ -132,23 +133,23 @@ int road::diParam::initParameters(const miutil::miString &headerfile)
 };
   
 bool 
-road::diParam::setParams(const miString &line)
+road::diParam::setParams(const string &line)
 {
   // TDB
   //Parameter	Group	Kod (kvalobs)	Kvalobsnummer	Enhet	Bestyckning	ROAD param observation	ROAD param modell
   //Temperatur, nuvärde	Temp	TA	211	C	T	[ 4 / 6 2.0 ]	[ 4 / 6 2.0 ]
   // there may bee empty lines just containing '\t'
   // possible name are #name	#group	#code	#id	#unit		#roadobs	#roadmodel
-  miString       buf;
-  vector<miString> names=line.split("\t",false);
+  string       buf;
+  vector<string> names=split(line,"\t",false);
   
-  vector<miString>::iterator it=names.begin();
+  vector<string>::iterator it=names.begin();
   
   int i = 0;
   for(;it!=names.end(); it++){
     
     try{
-		miString name = index_column_map[i];
+		string name = index_column_map[i];
 		if (name == "#name")
 		{
 			description_ = *it;
@@ -170,28 +171,28 @@ road::diParam::setParams(const miString &line)
 			// pase the ROAD param observation
 	  // [ 13 / 6 10.0 / avg -10m 0 ]
 	  buf = *it;
-	  buf.ltrim("[");
-	  buf.rtrim("]");
-	  miString tmpbuf;
-	  vector<miString> items=buf.split("/");
+	  trim( buf, true, false, "[");
+	  trim( buf, false, true, "]");
+	  string tmpbuf;
+	  vector<string> items=split(buf,"/");
 	  // preprocessing
 	  if (items.size() == 2)
-	    items.push_back(miString("None 0 0"));
+	    items.push_back(string("None 0 0"));
 	  if (items.size() != 3)
 	    {
 	      cerr << "wrong number of groups" << endl;
 	      return false;
 	    }
 	  //cerr << items[0] << endl;
-	  items[0].trim();
-	  parameter_ = items[0].toInt();
+	  trim(items[0]);
+	  parameter_ = to_int(items[0]);
 	  // preprocess item 1
 	  //cerr << items[1] << endl;
-	  vector<miString> level=items[1].split();
+	  vector<string> level=split(items[1]);
 	  if (level.size() == 1)
 	    {
-	      level.push_back(miString("-32767"));
-	      level.push_back(miString("32767"));
+	      level.push_back(string("-32767"));
+	      level.push_back(string("32767"));
 	    }
 	  else
 	    {
@@ -205,15 +206,15 @@ road::diParam::setParams(const miString &line)
 	      cerr << "invalid or unknown level parameter type" << endl;
 	      return false;
 	    }
-	  level[0].trim();
-	  srid_ = level[0].toInt() + 1000;
-	  level[1].trim();
-	  altitudefrom_ = level[1].toDouble();
-	  level[2].trim();
-	  altitudeto_ = level[2].toDouble();
+	  trim(level[0]);
+	  srid_ = to_int(level[0]) + 1000;
+	  trim(level[1]);
+	  altitudefrom_ = to_double(level[1]);
+	  trim(level[2]);
+	  altitudeto_ = to_double(level[2]);
 	  // prepreocee item 2
 	  //cerr << items[2] << endl;
-	  vector<miString> stats=items[2].split();
+	  vector<string> stats=split(items[2]);
 	  
 	  statisticstype_ = fixstat(stats[0]);
 	  validtimefromdelta_ = fixage(stats[1]);
@@ -232,10 +233,10 @@ road::diParam::setParams(const miString &line)
   return true;
 }
 
-map<miString,miString> road::diParam::init_stat_type()
+map<string,string> road::diParam::init_stat_type()
 {
   // new stat types in newark
-  map<miString,miString> tmpStat;
+  map<string,string> tmpStat;
   tmpStat["None"] = "Unknown";
   tmpStat["inst"] = "Instantaneous";
   tmpStat["avg"] = "Average";
@@ -248,9 +249,9 @@ map<miString,miString> road::diParam::init_stat_type()
   
 }
 
-map<miString,miString> road::diParam::init_unit_map()
+map<string,string> road::diParam::init_unit_map()
 {
-  map<miString,miString> tmpMap;
+  map<string,string> tmpMap;
   /*
   UNIT_MAPPER = {('kelvin','C'):'temp',
               ('metre', 'm'):'null',
@@ -278,12 +279,12 @@ map<miString,miString> road::diParam::init_unit_map()
   tmpMap["feet"] = "feet";
   return tmpMap;
 }
-miString road::diParam::fixstat(const miString & stat)
+string road::diParam::fixstat(const string & stat)
 {
   return stat_type[stat];
 }
 
-long road::diParam::fixage(miString & age)
+long road::diParam::fixage(string & age)
 {
   char * cage = (char *)age.c_str();
   // Check for default first
@@ -291,32 +292,32 @@ long road::diParam::fixage(miString & age)
 	  return LONG_MAX;
   if (cage[strlen(cage) -1] == 'd')
     {
-      age.rtrim("d");
-      return age.toLong()*3600*24;
+      trim(age,false,true,"d");
+      return to_long(age)*3600*24;
     }
   if (cage[strlen(cage) -1] == 'h')
     {
-      age.rtrim("h");     
-      return age.toLong()*3600;
+      trim(age,false,true,"h");     
+      return to_long(age)*3600;
     }
   if (cage[strlen(cage) -1] == 'm')
     {
-      age.rtrim("m");
-      return age.toLong()*60;
+      trim(age,false,true,"m");
+      return to_long(age)*60;
     }
   if (cage[strlen(cage) -1] == 's')
     {
-      age.rtrim("s");
-      return age.toLong();
+      trim(age,false,true,"s");
+      return to_long(age);
     }
-  return age.toLong();
+  return to_long(age);
 
 }
 
 bool
-road::diParam::setParams(const miutil::miString &diananame,
-	  const miutil::miString &description,
-	  const miutil::miString &comment,
+road::diParam::setParams(const string &diananame,
+	  const string &description,
+	  const string &comment,
 	  /* The road attributes */
 	  const int & parameter,
 	  const double & altitudefrom,
@@ -327,11 +328,11 @@ road::diParam::setParams(const miutil::miString &diananame,
 	  /* offset from reftime to validtimeto, mostly 0 */
 	  const long & validtimetodelta,
 	  /* unit in road */
-	  const miutil::miString &unit,
+	  const string &unit,
 	  /* dataversion, always 0 with the exception of EPS */
 	  const int & dataversion,
 	  /* the stat type, e.g RDKInst */
-	  const miutil::miString & statisticstype
+	  const string & statisticstype
 )
 {
   diananame_ = diananame;
@@ -362,7 +363,7 @@ bool road::diParam::isMapped(const RDKCOMBINEDROW_2 & row)
 	  if (row.srid != srid_) return false;
   if (toDianaUnit(row.unit) != unit_) return false;
   //if (row.dataversion != dataversion_) return false;
-  if (miString(row.statisticstype) != statisticstype_) return false;
+  if (string(row.statisticstype) != statisticstype_) return false;
   
   // and now the times
   if ((validtimefromdelta_ == LONG_MAX)&&(validtimetodelta_ == LONG_MAX)) return true;
@@ -435,7 +436,7 @@ void road::diParam::convertValue(RDKCOMBINEDROW_2 & row)
   }
 }
 
-miString road::diParam::toDianaUnit( const miString & roadunit)
+string road::diParam::toDianaUnit( const string & roadunit)
 {
   /*
   # (road_unit,kvalobs_unit) key to mapper
@@ -472,7 +473,7 @@ MAPPER = dict(
   return unit_map[roadunit];
 }
 
-miutil::miString 
+string 
 road::diParam::toSend() const
 {
   ostringstream ost;

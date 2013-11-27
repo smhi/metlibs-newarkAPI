@@ -37,6 +37,7 @@
 #include <vector>
 #include <float.h>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 
 //#define DEBUGPRINT 1
@@ -51,19 +52,19 @@ const std::string road::diStation::WMO("WMO");
 const std::string road::diStation::ICAO("ICAO");
 const std::string road::diStation::SHIP("SHIP");
 const std::string road::diStation::FLIGHT("FLIGHT");
-map<miString, map<int, miString> > road::diStation::dataproviders;
-map<miString, vector<road::diStation::diStation> * > road::diStation::station_map;
+map<string, map<int, string> > road::diStation::dataproviders;
+map<string, vector<road::diStation::diStation> * > road::diStation::station_map;
 
 
-int road::diStation::initStations(miString stationfile)
+int road::diStation::initStations(string stationfile)
 {
 	// init the class mutex
 	QMutexLocker l(&stationMutex);
 	// init iterator
-	map<miString, vector<diStation> * >::iterator its = road::diStation::station_map.begin();
+	map<string, vector<diStation> * >::iterator its = road::diStation::station_map.begin();
 	// find
 	its = road::diStation::station_map.find(stationfile);
-	miString station_type = road::diStation::WMO;
+	string station_type = road::diStation::WMO;
 	if (its == station_map.end())
 	{
 		vector <diStation> * stations = new vector <diStation>;
@@ -76,17 +77,17 @@ int road::diStation::initStations(miString stationfile)
 			{
 				ifs.getline(buf,254);
 				//cerr << buf << endl;
-				miString tmp(buf);
-				if (tmp.contains("obssource"))
+				string tmp(buf);
+				if (tmp.find("obssource")!= string::npos)
 				{
-					if (tmp.contains(road::diStation::WMO))
+					if (tmp.find(road::diStation::WMO)!=string::npos)
 						station_type = road::diStation::WMO;
-					if (tmp.contains(road::diStation::ICAO))
+					if (tmp.find(road::diStation::ICAO)!=string::npos)
 						station_type = road::diStation::ICAO;
 // TDB: the following types are dynamic, there position changes from time to time, try to init them with 0.0, 0.0 ?
-					if (tmp.contains(road::diStation::SHIP))
+					if (tmp.find(road::diStation::SHIP)!=string::npos)
 						station_type = road::diStation::SHIP;
-					if (tmp.contains(road::diStation::FLIGHT))
+					if (tmp.find(road::diStation::FLIGHT)!=string::npos)
 						station_type = road::diStation::FLIGHT;
 					continue;
 				}
@@ -135,37 +136,37 @@ int road::diStation::initStations(miString stationfile)
 	return 1;
 }
 
-void road::diStation::addDataProvider(const miString & stationfile, const int & wmono, const miString & dataprovider)
+void road::diStation::addDataProvider(const string & stationfile, const int & wmono, const string & dataprovider)
 {
 	QMutexLocker l(&stationMutex);
 	diStation::dataproviders[stationfile][wmono] = dataprovider;
 }
 
-miString 
+string 
 road::diStation::
 quoted(const int& in) const
 {
-  return quoted(miString(in));
+  return quoted(from_number(in));
 }
 
-miString 
+string 
 road::diStation::
 quoted(const miTime& in) const
 {  
   return quoted(in.isoTime(true,true));
 }
 
-miString 
+string 
 road::diStation::
-quoted(const miString& in) const
+quoted(const string& in) const
 {
-  miString out = "\'";
+  string out = "\'";
   out+=in+"\'";
   return out;
 }
 
 
-miString road::diStation::toSend() const
+string road::diStation::toSend() const
 {
   ostringstream ost;
   ost << "("
@@ -285,18 +286,18 @@ bool road::diStation::equalStation(const road::diStation & right)
 }
 
 bool road::diStation::setStation( int   stationid__,
-				  const miString& station_type__,
+				  const string& station_type__,
 			      float lat__,
 			      float lon__,
 			      float height__,
 			      float maxspeed__,
-			      const miString& name__,
+			      const string& name__,
 			      int   wmonr__,
 			      int   nationalnr__,
-			      const miString& ICAOid__,
-			      const miString& call_sign__,
-				  const miString& flight_no__,
-			      const miString& stationstr__,
+			      const string& ICAOid__,
+			      const string& call_sign__,
+				  const string& flight_no__,
+			      const string& stationstr__,
 			      int   environmentid__,
 			      bool  static__,
 			      const miutil::miTime& fromtime__)
@@ -321,18 +322,18 @@ bool road::diStation::setStation( int   stationid__,
   return true;
 }
 
-bool road::diStation::setStation(const miString & r_)
+bool road::diStation::setStation(const string & r_)
 {
   //dnmi::db::DRow &r=const_cast<dnmi::db::DRow&>(r_);
   //cerr << r_ << endl;
   //03923,GLENANNE NO2,54 14N,06 30W,160,161
-  miString       buf;
+  string       buf;
   
-  if (r_.contains(";"))
+  if (r_.find(";")!=string::npos)
   {
 	  // the new fromat
-	  vector<miString> names=r_.split(";",false);
-	  vector<miString>::iterator it=names.begin();
+	  vector<string> names=split(r_,";",false);
+	  vector<string>::iterator it=names.begin();
 
 	  int i = 0;
 	  if (station_type_ == road::diStation::WMO)
@@ -346,25 +347,25 @@ bool road::diStation::setStation(const miString & r_)
 				  switch(i)
 				  {
 				  case 0:
-					  wmo_block = it->toInt();
+					  wmo_block = to_int(*it);
 					  break;
 				  case 1:
-					  wmo_number = it->toInt();
+					  wmo_number = to_int(*it);
 					  break;
 				  case 2:
 					  name_ = *it;
 					  break;
 				  case 3:
-					  lat_ = it->toFloat();
+					  lat_ = to_float(*it);
 					  break;
 				  case 4:
-					  lon_ = it->toFloat();
+					  lon_ = to_float(*it);
 					  break;
 				  case 5:
 					  if (it->empty())
 						  height_ = -32767.0;
 					  else
-						  height_ = it->toFloat();
+						  height_ = to_float(*it);
 					  break;
 				  }
 
@@ -391,16 +392,16 @@ bool road::diStation::setStation(const miString & r_)
 					  name_ = *it;
 					  break;
 				  case 2:
-					  lat_ = it->toFloat();
+					  lat_ = to_float(*it);
 					  break;
 				  case 3:
-					  lon_ = it->toFloat();
+					  lon_ = to_float(*it);
 					  break;
 				  case 4:
 					  if (it->empty())
 						  height_ = -32767.0;
 					  else
-						  height_ = it->toFloat();
+						  height_ = to_float(*it);
 					  break;
 				  }
 
@@ -439,8 +440,8 @@ bool road::diStation::setStation(const miString & r_)
   else
   {
 	  // the old format
-	  vector<miString> names=r_.split(",",false);
-	  vector<miString>::iterator it=names.begin();
+	  vector<string> names=split(r_,",",false);
+	  vector<string>::iterator it=names.begin();
 
 	  int i = 0;
 	  for(;it!=names.end(); it++){
@@ -450,16 +451,16 @@ bool road::diStation::setStation(const miString & r_)
 			  switch(i)
 			  {
 			  case 0:
-				  wmonr_ = it->toInt();
+				  wmonr_ = to_int(*it);
 				  break;
 			  case 1:
 				  name_ = *it;
 				  break;
 			  case 2:
-				  lat_ = it->toFloat();
+				  lat_ = to_float(*it);
 				  break;
 			  case 3:
-				  lon_ = it->toFloat();
+				  lon_ = to_float(*it);
 				  break;
 			  case 4:
 				  // is empty ?
@@ -468,7 +469,7 @@ bool road::diStation::setStation(const miString & r_)
 				  if (it->empty())
 					  height_ = -23767.0;
 				  else
-					  height_ = it->toFloat();
+					  height_ = to_float(*it);
 				  break;
 			  }
 
@@ -481,13 +482,13 @@ bool road::diStation::setStation(const miString & r_)
   }
   environmentid_ = 0;
   data_ = false;
-  //sortBy_= miString(stationid_);
+  //sortBy_= string(stationid_);
   return true;
 }
 
 
 
-miutil::miString 
+string 
 road::diStation::uniqueKey()const
 {
   ostringstream ost;

@@ -54,7 +54,7 @@ using namespace road;
 
 QMutex RoadDataThread::outMutex;
 // Default constructor protected
-RoadDataThread::RoadDataThread(const vector<road::diStation> & in_stations_to_plot, map<int, miString > & in_tmp_data, map<int, miString> & in_lines)
+RoadDataThread::RoadDataThread(const vector<road::diStation> & in_stations_to_plot, map<int, string > & in_tmp_data, map<int, string> & in_lines)
 :QThread(NULL),stations_to_plot(in_stations_to_plot), tmp_data(in_tmp_data), lines(in_lines){
 	QMutexLocker l(&outMutex);
 	stop = false;
@@ -125,6 +125,7 @@ void RoadDataThread::run()
 retry:
 	try {
 		theConn = new connection(connect_str);
+		theConn->set_client_encoding("LATIN6");
 	}
 	catch (pqxx_exception &e)
 	{
@@ -168,8 +169,8 @@ retry:
 
 			char place_id[512];
 	        char dataversions[] = "0";
-			map<int,miString>::iterator itm = diStation::dataproviders[stationfile_].begin();
-			map<int,miString>::iterator itd = tmp_data.begin();
+			map<int,string>::iterator itm = diStation::dataproviders[stationfile_].begin();
+			map<int,string>::iterator itd = tmp_data.begin();
 			int i = info.stationindex_;
 			miTime obstime_ = info.obstime_;
 			// init the result line
@@ -180,23 +181,23 @@ retry:
 			char query[10240];
 			if ((*stations)[i].station_type() == road::diStation::WMO)
 			{
-				sprintf(buf, "%d %s %s %f %f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+				sprintf(buf, "%d|%s|%s|%f|%f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 			}
 			else if ((*stations)[i].station_type() == road::diStation::ICAO)
 			{
-				sprintf(buf, "%s %s %s %f %f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+				sprintf(buf, "%s|%s|%s|%f|%f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 			}
 			else if ((*stations)[i].station_type() == road::diStation::SHIP)
 			{
 				// Call signs have trailing space and space between name parts. They must bee removed and replaced.
-				miString call_sign_ = (*stations)[i].call_sign();
-				call_sign_.trim(true, true, " ");
-				call_sign_.replace(" ", "_");
-				sprintf(buf, "%s %s %s", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str());
+				string call_sign_ = (*stations)[i].call_sign();
+				//call_sign_.trim(true, true, " ");
+				//call_sign_.replace(" ", "_");
+				sprintf(buf, "%s|%s|%s", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str());
 			}
-			miString line(buf);
+			string line(buf);
 
-			vector<miString> tmpresult;
+			vector<string> tmpresult;
 			for (j = 0; j < params->size(); j++)
 			{
 				tmpresult.push_back("-32767.0");
@@ -218,12 +219,21 @@ retry:
 			{
 				// check if station is in stations_to_plot!
 				bool toplot = false;
-				for (int k = 0; k < stations_to_plot.size(); k++)
+				// Either ship obs or batch diana
+				if (stations_to_plot.size() == 0)
 				{
-					if (stations_to_plot[k].stationID() == (*stations)[i].stationID())
+					// Bad performance, but what to do...
+					toplot = true;
+				}
+				else
+				{
+					for (int k = 0; k < stations_to_plot.size(); k++)
 					{
-						toplot = true;
-						break;
+						if (stations_to_plot[k].stationID() == (*stations)[i].stationID())
+						{
+							toplot = true;
+							break;
+						}
 					}
 				}
 				if (toplot)
@@ -267,7 +277,7 @@ retry:
 							else if ((*stations)[i].station_type() == road::diStation::ICAO)
 							{
 								// (Queries)
-								miString icaoid = (*stations)[i].ICAOID();
+								string icaoid = (*stations)[i].ICAOID();
 								// Search for surface stations (wmo_station_type_code = 0)
 								sprintf(query,
 									"SELECT * FROM \
@@ -279,12 +289,12 @@ retry:
 							else if ((*stations)[i].station_type() == road::diStation::SHIP)
 							{
 								// (Queries)
-								miString callsign = (*stations)[i].call_sign();
+								string callsign = (*stations)[i].call_sign();
 								// Search for surface stations (wmo_station_type_code = 0)
 								sprintf(query,
-									"SELECT ship.ship_id AS ship_id, ship.sender_id AS sender_id \
+									"SELECT trim(ship.ship_id) AS ship_id, ship.sender_id AS sender_id \
 									FROM ship_view ship \
-									WHERE ship.ship_id = '%s';", callsign.c_str());
+									WHERE trim(ship.ship_id) = '%s';", callsign.c_str());
 							}
 
 #ifdef DEBUGPRINT
@@ -304,7 +314,7 @@ retry:
 #ifdef WIN32
 									QMutexLocker l(&outMutex);
 #endif
-									result::tuple row = res.at(m);
+									tuple row = res.at(m);
 #ifdef DEBUGPRINT
 									if ((*stations)[i].station_type() == road::diStation::WMO)
 									{
@@ -357,7 +367,7 @@ retry:
 								strcpy(place_id, "0");
 							}
 							// we can use the place_id as a dataprovider
-							diStation::addDataProvider(stationfile_, (*stations)[i].stationID(), miString(place_id));
+							diStation::addDataProvider(stationfile_, (*stations)[i].stationID(), string(place_id));
 							
 
 						}
@@ -369,6 +379,16 @@ retry:
 								std::cerr << "Query was: " << s->query() << std::endl;
 							else
 								std::cerr << "Query was: " << query << std::endl;
+#ifdef DEBUGPRINT
+							cerr << "++ Roaddatathread::run() done ++" << endl;
+#endif
+							theConn->disconnect();
+							delete theConn;
+							theConn = NULL;
+							exit(1);
+							stop = true;
+							break;
+
 						}
 						catch (...)
 						{
@@ -390,89 +410,9 @@ retry:
 					int nTmpRows = 0;
 					char observation_master_ids[2048];
 					observation_master_ids[0] = '\0';
+					
 					timeb tstart, tend;
 					ftime(&tstart);
-					try {
-						if ((*stations)[i].station_type() == road::diStation::WMO || (*stations)[i].station_type() == road::diStation::ICAO)
-						{
-							sprintf(query, "select observation_master_id from stationary_observation_value_context_view where position_id in(%s) and parameter_id in(%s);",
-								(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters);
-						}
-						else if ((*stations)[i].station_type() == road::diStation::SHIP)
-						{
-							sprintf(query, "select observation_master_id from ship_observation_value_context_view where sender_id in(%s) and parameter_id in(%s);",
-								(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters);
-						} 
-#ifdef DEBUGSQL
-						cerr << "query: " << query << endl;
-#endif
-						work T((*theConn), "GetMasterIdTrans");
-						result res = T.exec(query);
-						T.commit();
-						if (!res.empty())
-						{
-							
-							nTmpRows = res.size();
-#ifdef DEBUGPRINT
-							cerr << "Size of result set: " << nTmpRows << endl;
-#endif
-							if (nTmpRows < 100)
-							{
-								for (int m = 0; m < nTmpRows; m++)
-								{
-#ifdef WIN32
-									QMutexLocker l(&outMutex);
-#endif
-									result::tuple row = res.at(m);
-									if (m==0)
-									{
-										strcpy(observation_master_ids, row["observation_master_id"].c_str());
-									}
-									else
-									{
-										strcat(observation_master_ids, ",");
-										strcat(observation_master_ids, row["observation_master_id"].c_str());
-									}
-								}
-#ifdef DEBUGPRINT
-								cerr << observation_master_ids << "," << nTmpRows << "," << (char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str() << endl;
-#endif
-							}
-							else
-							{
-#ifdef DEBUGPRINT
-								cerr << nTmpRows << "," << (char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str() << endl;
-#endif
-							}
-							res.clear();
-							
-						}
-						
-					}
-					catch (const pqxx::pqxx_exception &e)
-					{
-						std::cerr << "Roaddatathread::run(), Getting observation_master_id's failed! " << e.base().what() << std::endl;
-						const pqxx::sql_error *s=dynamic_cast<const pqxx::sql_error*>(&e.base());
-						if (s)
-							std::cerr << "Query was: " << s->query() << std::endl;
-						else
-							std::cerr << "Query was: " << query << std::endl;
-					}
-					catch (...)
-					{
-						// If we get here, Xaction has been rolled back
-						cerr << "Roaddatathread::run(), Getting observation_master_id's failed!" << endl;
-						cerr << "query: " << query << endl;
-#ifdef DEBUGPRINT
-						cerr << "++ Roaddatathread::run() done ++" << endl;
-#endif
-						theConn->disconnect();
-						delete theConn;
-						theConn = NULL;
-						exit(1);
-						stop = true;
-						break;
-					}
 					try {
 						// Get data from newark....
 						nTmpRows = 0;
@@ -482,22 +422,16 @@ retry:
 							if (strlen(observation_master_ids))
 							{
 								sprintf(query,
-									"SELECT * FROM \
-									(SELECT wmo.wmo_block_number AS wmo_block, wmo.wmo_station_number AS wmo_number, wmo.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
-FROM wmo_station_identity_view wmo, stationary_observation_place_view pos, stationary_observation_value_view val, stationary_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_combination_view lc, level_parameter_view lp \
-WHERE wmo.position_id = pos.position_id AND wmo.position_id = ctx.position_id AND val.real_time_store=true AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND lc.level_combination_id = ctx.level_combination_id AND lp.level_parameter_id = lc.level_parameter_id) \
-AS diana_wmo_observation_wiew where observation_master_id in (%s) and reference_time='%s';",
-									observation_master_ids, (char *)obstime_.isoTime(true,true).c_str());
+									"SELECT * FROM(SELECT wmo.wmo_block_number AS wmo_block, wmo.wmo_station_number AS wmo_number, wmo.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon,ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, ctx.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
+FROM wmo_station_identity_view wmo join stationary_observation_value_context_view ctx on wmo.position_id = ctx.position_id join stationary_observation_place_view pos on wmo.position_id = pos.position_id  join stationary_observation_value_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between wmo.validtime_from and wmo.validtime_to and val.real_time_store=true join statistics_formula_view f on f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_wmo_observation_wiew WHERE observation_master_id in (%s) and reference_time='%s';" 
+,observation_master_ids, (char *)obstime_.isoTime(true,true).c_str());
 							}
 							else
 							{
 								sprintf(query,
-									"SELECT * FROM \
-									(SELECT wmo.wmo_block_number AS wmo_block, wmo.wmo_station_number AS wmo_number, wmo.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
-FROM wmo_station_identity_view wmo, stationary_observation_place_view pos, stationary_observation_value_view val, stationary_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_combination_view lc, level_parameter_view lp \
-WHERE wmo.position_id = pos.position_id AND wmo.position_id = ctx.position_id AND val.real_time_store=true AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND lc.level_combination_id = ctx.level_combination_id AND lp.level_parameter_id = lc.level_parameter_id) \
-AS diana_wmo_observation_wiew where position_id in(%s) and parameter_id in(%s) and reference_time='%s';",
-									(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str());
+									"SELECT * FROM ( SELECT wmo.wmo_block_number AS wmo_block, wmo.wmo_station_number AS wmo_number, wmo.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, ctx.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
+FROM wmo_station_identity_view wmo join stationary_observation_value_context_view ctx on wmo.position_id = ctx.position_id join stationary_observation_place_view pos on wmo.position_id = pos.position_id join stationary_observation_value_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between wmo.validtime_from and wmo.validtime_to and val.real_time_store=true join statistics_formula_view f on f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_wmo_observation_wiew WHERE position_id in(%s) and parameter_id in(%s) and reference_time='%s';",
+(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str());
 							}
 						}
 						else if ((*stations)[i].station_type() == road::diStation::ICAO)
@@ -514,21 +448,15 @@ AS diana_wmo_observation_wiew where position_id in(%s) and parameter_id in(%s) a
 							if (strlen(observation_master_ids))
 							{
 								sprintf(query,
-									"SELECT * FROM \
-									(SELECT icao.icao_code AS icao_code, icao.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
-FROM icao_station_identity_view icao, stationary_observation_place_view pos, stationary_observation_value_view val, stationary_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_combination_view lc, level_parameter_view lp \
-WHERE icao.position_id = pos.position_id AND icao.position_id = ctx.position_id AND val.real_time_store=true AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND lc.level_combination_id = ctx.level_combination_id AND lp.level_parameter_id = lc.level_parameter_id) \
-AS diana_icao_observation_wiew where observation_master_id in (%s) and valid_to='%s'and reference_time='%s';",
+									"SELECT * FROM ( SELECT  icao.icao_code AS icao_code, icao.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
+FROM icao_station_identity_view icao join stationary_observation_value_context_view ctx on icao.position_id = ctx.position_id join stationary_observation_place_view pos on icao.position_id = pos.position_id join stationary_observation_value_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between icao.validtime_from and icao.validtime_to and val.real_time_store=true join statistics_formula_view f on  f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_icao_observation_wiew WHERE observation_master_id in (%s) and valid_to='%s'and reference_time='%s';",
 									observation_master_ids, (char *)obstime_.isoTime(true,true).c_str(),(char *)refTime.isoTime(true,true).c_str());
 							}
 							else
 							{
 								sprintf(query,
-									"SELECT * FROM \
-									(SELECT icao.icao_code AS icao_code, icao.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
-FROM icao_station_identity_view icao, stationary_observation_place_view pos, stationary_observation_value_view val, stationary_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_combination_view lc, level_parameter_view lp \
-WHERE icao.position_id = pos.position_id AND icao.position_id = ctx.position_id AND val.real_time_store=true AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND lc.level_combination_id = ctx.level_combination_id AND lp.level_parameter_id = lc.level_parameter_id) \
-AS diana_wmo_observation_wiew where position_id in(%s) and parameter_id in(%s) and valid_to='%s'and reference_time='%s';",
+									"SELECT * FROM ( SELECT  icao.icao_code AS icao_code, icao.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
+FROM icao_station_identity_view icao join stationary_observation_value_context_view ctx on icao.position_id = ctx.position_id join stationary_observation_place_view pos on icao.position_id = pos.position_id join stationary_observation_value_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between icao.validtime_from and icao.validtime_to and val.real_time_store=true join statistics_formula_view f on  f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_icao_observation_wiew where position_id in(%s) and parameter_id in(%s) and valid_to='%s'and reference_time='%s';",
 									(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str(),(char *)refTime.isoTime(true,true).c_str());
 							}
 						}
@@ -538,7 +466,7 @@ AS diana_wmo_observation_wiew where position_id in(%s) and parameter_id in(%s) a
 							{
 								sprintf(query,
 										"SELECT * FROM \
-										(SELECT ship.ship_id AS ship_id, ship.sender_id AS sender_id, round(val.lat::numeric, 2) AS lat, round(val.lon::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
+										(SELECT trim(ship.ship_id) AS ship_id, ship.sender_id AS sender_id, round(val.lat::numeric, 2) AS lat, round(val.lon::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
 FROM ship_view ship, ship_observation_value_view val, ship_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_parameter_view lp, level_combination_view lc \
 WHERE ship.sender_id = ctx.sender_id AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND ctx.level_combination_id = lc.level_combination_id AND lc.level_parameter_id = lp.level_parameter_id) \
 AS diana_ship_observation_wiew where observation_master_id in (%s) and reference_time='%s';",
@@ -548,7 +476,7 @@ AS diana_ship_observation_wiew where observation_master_id in (%s) and reference
 							{
 								sprintf(query,
 									"SELECT * FROM \
-									(SELECT ship.ship_id AS ship_id, ship.sender_id AS sender_id, round(val.lat::numeric, 2) AS lat, round(val.lon::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
+									(SELECT trim(ship.ship_id) AS ship_id, ship.sender_id AS sender_id, round(val.lat::numeric, 2) AS lat, round(val.lon::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
 FROM ship_view ship, ship_observation_value_view val, ship_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_parameter_view lp, level_combination_view lc \
 WHERE ship.sender_id = ctx.sender_id AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND ctx.level_combination_id = lc.level_combination_id AND lc.level_parameter_id = lp.level_parameter_id) \
 AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) and reference_time='%s';",
@@ -578,7 +506,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 #ifdef WIN32
 								QMutexLocker l(&outMutex);
 #endif
-								result::tuple row = res.at(m);
+								tuple row = res.at(m);
 
 #ifdef DEBUGPRINT
 								if ((*stations)[i].station_type() == road::diStation::WMO)
@@ -608,15 +536,17 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 								}
 								else if ((*stations)[i].station_type() == road::diStation::SHIP)
 								{
-									// NOTE: Offset -1 for position_id
-									cout << row[ 0 ].c_str() << ": " << row[ position_id -1].c_str()
-										<< ": " << row[ lat -1 ].c_str()<< ": " << row[ lon -1].c_str()<< ": " << row[ parameter_id -1].c_str()
-										<< ": " << row[ level_parameter_id -1 ].c_str()<< ": " << row[ level_from -1 ].c_str()<< ": " << row[ level_to -1 ].c_str()
-										<< ": " << row[ level_parameter_unit_name -1].c_str()<< ": " << row[ statistics_type -1].c_str()<< ": " << row[ value -1 ].c_str()
-                                                                                << ": " << row[ unit-1].c_str()<< ": " << row[ quality -1].c_str()<< ": " << row[ automation_code -1 ].c_str()
-										<< ": " << row[ reference_time -1 ].c_str()<< ": " << row[ valid_from -1 ].c_str()<< ": " << row[ valid_to -1 ].c_str()
-										<< ": " << row[ observation_master_id -1].c_str()<< ": " << row[ time_tick -1 ].c_str()<< ": " << row[ observation_sampling_time -1].c_str()
-										<< ": " << row[ offset_from_time_tick -1].c_str()<< ": " << row[ value_version_number -1 ].c_str()
+									//ship_id,sender_id,lat,lon,parameter_id,level_parameter_id,level_from,level_to,level_parameter_unit_name,statistics_type,value,parameter_unit,quality,automation_code,reference_time,valid_from,valid_to,observation_master_id,time_tick,observation_sampling_time_seconds,offset_from_time_tick_seconds,value_version_number
+									//ZQSD5,3281,58.30,0.80,1006,104,0,0,metre,Instantaneous,102060,pascal,Nordklim:89999,0,2013-10-14 01:00:00,2013-10-14 01:00:00,2013-10-14 01:00:00,140824,2013-10-14 01:00:00,0,0,0
+									
+									cout << row[ s_ship_id ].c_str() << ": " << row[ s_sender_id].c_str()
+										<< ": " << row[ s_lat ].c_str()<< ": " << row[ s_lon].c_str()<< ": " << row[ s_parameter_id ].c_str()
+										<< ": " << row[ s_level_parameter_id ].c_str()<< ": " << row[ s_level_from ].c_str()<< ": " << row[ s_level_to ].c_str()
+										<< ": " << row[ s_level_parameter_unit_name].c_str()<< ": " << row[ s_statistics_type ].c_str()<< ": " << row[ s_value ].c_str()
+                                                                                << ": " << row[ s_parameter_unit ].c_str()<< ": " << row[ s_quality ].c_str()<< ": " << row[ s_automation_code ].c_str()
+										<< ": " << row[ s_reference_time ].c_str()<< ": " << row[ s_valid_from ].c_str()<< ": " << row[ s_valid_to ].c_str()
+										<< ": " << row[ s_observation_master_id ].c_str()<< ": " << row[ s_time_tick ].c_str()<< ": " << row[ s_observation_sampling_time_seconds ].c_str()
+										<< ": " << row[ s_offset_from_time_tick_seconds ].c_str()<< ": " << row[ s_value_version_number ].c_str()
 										<< endl;
 								}
 #endif
@@ -709,40 +639,40 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 								{
 									crow.integervalue=0;
 									crow.integervalue_is_null=true;
-									row[ value -1 ].to(crow.floatvalue);
+									row[ s_value ].to(crow.floatvalue);
 									crow.floatvalue_is_null=false;
 									crow.floatdecimalprecision=0;
 									// There are some similarities between these to
-									row[ position_id-1 ].to(crow.dataprovider);
+									row[ s_sender_id ].to(crow.dataprovider);
 									// Thew position_id are unique
-									row[ position_id -1].to(crow.origindataproviderindex);
+									row[ s_sender_id ].to(crow.origindataproviderindex);
 									crow.arearef[0] = '\0';
-									row[ position_id -1].to(crow.origingeoindex);
-									row[ lat -1 ].to(crow.geop.lat);
-									row[ lon -1 ].to(crow.geop.lon);
-									row[ level_from -1 ].to(crow.altitudefrom);
-									row[ level_to -1 ].to(crow.altitudeto);
-									strcpy(crow.validtimefrom,row[ valid_from -1 ].c_str());
-									strcpy(crow.validtimeto,row[ valid_to -1 ].c_str());
+									row[ s_sender_id ].to(crow.origingeoindex);
+									row[ s_lat ].to(crow.geop.lat);
+									row[ s_lon ].to(crow.geop.lon);
+									row[ s_level_from ].to(crow.altitudefrom);
+									row[ s_level_to ].to(crow.altitudeto);
+									strcpy(crow.validtimefrom,row[ s_valid_from ].c_str());
+									strcpy(crow.validtimeto,row[ s_valid_to ].c_str());
 									// we must fake a reference time from valid to for metar
-									strcpy(crow.reftime,row[ valid_to -1 ].c_str());
+									strcpy(crow.reftime,row[ s_valid_to ].c_str());
 									// We must add 1000 to this
-									row[ level_parameter_id -1 ].to(crow.srid);
+									row[ s_level_parameter_id ].to(crow.srid);
 									crow.srid=crow.srid + 1000;
 									// Note, the quality are not equal....
-                                    strcpy(crow.quality,row[ quality -1 ].c_str());
+                                    strcpy(crow.quality,row[ s_quality ].c_str());
 									// The parameter are the same
-									row[ parameter_id -1 ].to(crow.parameter);
+									row[ s_parameter_id ].to(crow.parameter);
 									// No longer needed, set to 0
 									crow.parametercodespace=0;
 									crow.levelparametercodespace=0;
 									//The unit are the same 
-									strcpy(crow.unit,row[ unit -1 ].c_str()); 
+									strcpy(crow.unit,row[ s_parameter_unit ].c_str()); 
 									// The stortime, set it to reference time
-									strcpy(crow.storetime,row[ reference_time -1 ].c_str());
-									row[ value_version_number -1 ].to(crow.dataversion);
-									row[ automation_code -1 ].to(crow.automationcode);
-									strcpy(crow.statisticstype, row[ statistics_type -1 ].c_str());
+									strcpy(crow.storetime,row[ s_reference_time ].c_str());
+									row[ s_value_version_number ].to(crow.dataversion);
+									row[ s_automation_code ].to(crow.automationcode);
+									strcpy(crow.statisticstype, row[ s_statistics_type ].c_str());
 								}
 
 #ifdef DEBUGPRINT
@@ -795,7 +725,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 											sprintf(tmpBuf, "%f", crow.floatvalue);
 										else
 											sprintf(tmpBuf, "%i", crow.integervalue);
-										tmpresult[k] = miString(tmpBuf);
+										tmpresult[k] = string(tmpBuf);
 #ifdef DEBUGPRINT
 										cerr << "Param: " << (*params)[k].diananame() << " value: " << tmpresult[k] << endl;
 #endif
@@ -816,6 +746,15 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 							std::cerr << "Query was: " << s->query() << std::endl;
 						else
 							std::cerr << "Query was: " << query << std::endl;
+#ifdef DEBUGPRINT
+						cerr << "++ Roaddatathread::run() done ++" << endl;
+#endif
+						theConn->disconnect();
+						delete theConn;
+						theConn = NULL;
+						exit(1);
+						stop = true;
+						break;
 					}
 					catch (...)
 					{
@@ -854,11 +793,11 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 					// What if we dont get data from the mobile source ?
 					if ((*stations)[i].station_type() == road::diStation::SHIP)
 					{
-						line = line + " " + miString((*stations)[i].lat()) + " " + miString((*stations)[i].lon());
+						line = line + "|" + from_number((*stations)[i].lat()) + "|" + from_number((*stations)[i].lon());
 					}
 					for (j = 0; j < tmpresult.size(); j++)
 					{
-						line = line + " " + tmpresult[j];
+						line = line + "|" + tmpresult[j];
 					}
 					// here, we should add the result to cache
 					// Maybe, use map in maps ???
@@ -882,7 +821,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 				{
 					for (j = 0; j < tmpresult.size(); j++)
 					{
-						line = line + " " + tmpresult[j];
+						line = line + "|" + tmpresult[j];
 					}
 					QMutexLocker l(&outMutex);
 					lines[(*stations)[i].stationID()] = line;

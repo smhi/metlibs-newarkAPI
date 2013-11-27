@@ -2,19 +2,19 @@
 #include "config.h"
 #endif
 
-#include <diRoaddata.h>
+#include "diRoaddata.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>
-#include <strstream>
+#include <sstream>
 #include <time.h>
 #include <sys/timeb.h>
 #include <pqxx/pqxx>
 //#include <pgconpool/dbConnectionPool.h>
 //#include <pgconpool/dbConnection.h>
-#include <diParam.h>
-#include <diRoaddatathread.h>
+#include "diParam.h"
+#include "diRoaddatathread.h"
 #include <set>
 
 using namespace std;
@@ -25,14 +25,14 @@ using namespace pqxx;
 
 //DbConnectionPoolPtr road::Roaddata::thePool(new DbConnectionPool());
 // the default, should be init to empty "" in the future
-miString road::Roaddata::host = "";
-miString road::Roaddata::port = "";
-miString road::Roaddata::dbname = "";
-miString road::Roaddata::user = "";
-miString road::Roaddata::passwd = "";
+string road::Roaddata::host = "";
+string road::Roaddata::port = "";
+string road::Roaddata::dbname = "";
+string road::Roaddata::user = "";
+string road::Roaddata::passwd = "";
 std::string road::Roaddata::connect_str = "";
 bool road::Roaddata::initDone = false;
-map<miTime, map<int, miString > > road::Roaddata::road_cache;
+map<miTime, map<int, string > > road::Roaddata::road_cache;
 map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > road::Roaddata::road_multi_cache;
 
 //#define DEBUGPRINT 1
@@ -60,7 +60,7 @@ map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > road::Roaddata::road_multi_ca
 //4196
 //) and parameter_id in(1,2,3,4,5,6,7,8,9,10) and reference_time >= '2011-08-18 00:00:00' and reference_time <= '2011-08-19 00:00:00';
 
-int road::Roaddata::initRoaddata(const miString &databasefile)
+int road::Roaddata::initRoaddata(const string &databasefile)
 {
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::initRoaddata( databasefile: " << databasefile << " ) ++" << endl;
@@ -69,15 +69,15 @@ int road::Roaddata::initRoaddata(const miString &databasefile)
 	if (initDone)
 		return 1;
     ifstream ifs(databasefile.c_str(),ios::in);
-	vector<miString> token;
+	vector<string> token;
     char buf[255];
 	if (ifs.is_open())
 	  { 
 	    while (ifs.good())
 		{
 			ifs.getline(buf,254);
-			miString tmp(buf);
-			token = tmp.split("=");
+			string tmp(buf);
+			token = split(tmp,"=");
 			if (token[0] == "host")
 				host = token[1];
 			else if (token[0] == "port")
@@ -129,6 +129,7 @@ int road::Roaddata::initRoaddata(const miString &databasefile)
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::initRoaddata( ) done, OK! ++" << endl;
 #endif
+		initDone = 1;
 		return 1;
 	  }
 #ifdef DEBUGPRINT
@@ -138,7 +139,236 @@ int road::Roaddata::initRoaddata(const miString &databasefile)
 
 }
 
-Roaddata::Roaddata(const miString &databasefile, const miString &stationfile, const miString &parameterfile, const miTime &obstime)
+int road::Roaddata::getStationList(string & inquery, vector <diStation> * & stations, const string &station_type)
+{
+#ifdef DEBUGPRINT
+	cerr << "++ Roaddata::getStationList( query: " << inquery << " station type: "  << station_type << " ) ++" << endl;
+#endif
+	
+	// connect the database
+	connection * theConn = NULL;
+	
+	int noOfStations = 0;
+	// we use lib pqxx directly
+	int retries = 0;
+retry:
+	try {
+		theConn = new connection(connect_str);
+		theConn->set_client_encoding("LATIN6");
+	}
+	catch (pqxx_exception &e)
+	{
+		cerr << "Roaddata::getStationList(), Connection to db failed! no = " << retries << ", " << e.base().what()  << endl;
+
+		if (retries >= 10)
+		{
+			cerr << "Roaddata::getStationList(), Connection to db failed!, " << connect_str.c_str() << endl;
+#ifdef DEBUGPRINT
+			cerr << "++ Roaddata::getStationList() done ++" << endl;
+#endif
+			return 1;
+		}
+		else
+		{
+			retries++;
+			sleep ( 1 );
+			goto retry;
+		}
+	}
+	catch (...)
+	{
+		cerr << "Roaddata::getStationList(), Connection to db failed!, " << connect_str.c_str() << endl;
+#ifdef DEBUGPRINT
+		cerr << "++ Roaddata::getStationList() done ++" << endl;
+#endif
+		return 0;
+	}
+	char query[1024];
+	// Get the station list
+	try
+	{
+		// Format the query and execute it.
+		
+		query[0] = '\0';
+		char tmp[1024];
+		tmp[0] = '\0';
+		if (station_type == road::diStation::WMO)
+		{
+			// get the current time
+			miTime now = miTime::nowTime();
+			sprintf(tmp, "%s", (char *)inquery.c_str());
+			sprintf(query, tmp, (char *)now.isoTime(true,true).c_str());
+		}
+		else if (station_type == road::diStation::ICAO)
+		{
+			// get the current time
+			miTime now = miTime::nowTime();
+			sprintf(tmp, "%s", (char *)inquery.c_str());
+			sprintf(query, tmp, (char *)now.isoTime(true,true).c_str());
+		}
+		else if (station_type == road::diStation::SHIP)
+		{
+			sprintf(query, "%s", (char *)inquery.c_str());
+		}
+		work T( (*theConn), "StationListTrans");
+		// Execute the query
+		// get the result
+		result res = T.exec(query);
+		T.commit();
+		int nTmpRows = 0;
+		if (!res.empty())
+		{
+			nTmpRows = res.size();
+			if (station_type == road::diStation::WMO)
+			{
+				for (int j = 0; j < nTmpRows; j++)
+				{
+					tuple row = res.at(j);
+#ifdef DEBUGPRINT
+					// Note, all columns are not used...
+					cout << row["wmo_block"].c_str() << ": " << row["wmo_number"].c_str() << ": " << row["station_name"].c_str()
+						<< ": " << row["lat"].c_str()<< ": " << row["lon"].c_str() << ": " << row["height_above_mean_sea_level"].c_str() << ": " << row["barometer_height"].c_str()
+						<< ": " << row["wmo_station_type_code"].c_str()
+						<< ": " << row["validtime_to"].c_str()<< endl;
+#endif
+					// Construct the station object and add it to stations
+					diStation station;
+					station.setStationType(station_type);
+					// here we must parse the resulting row and set the proper attributes in station
+					//1;152;"BODO";67.25;14.40;13.00;15;1;"2999-12-31 23:59:59"
+					int wmo_block, wmo_number;
+					row["wmo_block"].to(wmo_block);
+					row["wmo_number"].to(wmo_number);
+					int tmpwmono = wmo_block * 1000 + wmo_number;
+					station.setWmonr(tmpwmono);
+					string name = row["station_name"].c_str();
+					station.setName(name);
+					float lat;
+					row["lat"].to(lat);
+					station.setLat(lat);
+					float lon;
+					row["lon"].to(lon);
+					station.setLon(lon);
+					float height;
+					row["height_above_mean_sea_level"].to(height);
+					station.setHeight(height);
+					// Begin with 1...
+					station.setStationID(j + 1);
+#ifdef DEBUGPRINT
+					cerr << station.toSend() << endl;
+#endif
+					stations->push_back(station);
+
+				}
+			}
+			else if (station_type == road::diStation::ICAO)
+			{
+				for (int j = 0; j < nTmpRows; j++)
+				{
+					tuple row = res.at(j);
+#ifdef DEBUGPRINT
+					// Note, all columns are not used...
+					cout << row["icao_code"].c_str() << ": " << row["station_name"].c_str()
+						<< ": " << row["lat"].c_str()<< ": " << row["lon"].c_str() << ": " << row["height_above_mean_sea_level"].c_str() << ": " << row["barometer_height"].c_str()
+						<< ": " << row["validtime_to"].c_str()<< endl;
+#endif
+					// Construct the station object and add it to stations
+					diStation station;
+					station.setStationType(station_type);
+					string ICAOid = row["icao_code"].c_str();
+					station.set_ICAOID(ICAOid);
+					string name = row["station_name"].c_str();
+					station.setName(name);
+					float lat;
+					row["lat"].to(lat);
+					station.setLat(lat);
+					float lon;
+					row["lon"].to(lon);
+					station.setLon(lon);
+					float height;
+					row["height_above_mean_sea_level"].to(height);
+					station.setHeight(height);
+					// Begin with 1...
+					station.setStationID(j + 1);
+#ifdef DEBUGPRINT
+					cerr << station.toSend() << endl;
+#endif
+					stations->push_back(station);
+
+				}
+			}
+			else if (station_type == road::diStation::SHIP)
+			{
+				for (int j = 0; j < nTmpRows; j++)
+				{
+					tuple row = res.at(j);
+#ifdef DEBUGPRINT
+					// Note, all columns are not used...
+					cout << row["ship_id"].c_str() << ": " << row["sender_id"].c_str() << ": " << row["sender_type"].c_str() << endl;
+#endif
+					// Construct the station object and add it to stations
+					diStation station;
+					station.setStationType(station_type);
+					string call_sign = row["ship_id"].c_str();
+					trim(call_sign);
+					station.set_call_sign(call_sign);
+					station.setLat(0.0);
+					station.setLon(0.0);
+					station.setHeight(0.0);
+					// Begin with 1...
+					station.setStationID(j + 1);
+#ifdef DEBUGPRINT
+					cerr << station.toSend() << endl;
+#endif
+					stations->push_back(station);
+
+				}
+			}
+
+		}
+	}
+	catch (const pqxx::pqxx_exception &e)
+	{
+		std::cerr << "Roaddata::getStationList(), failed! " << e.base().what() << std::endl;
+		const pqxx::sql_error *s=dynamic_cast<const pqxx::sql_error*>(&e.base());
+		if (s)
+			std::cerr << "Query was: " << s->query() << std::endl;
+		else
+			std::cerr << "Query was: " << query << std::endl;
+#ifdef DEBUGPRINT
+		cerr << "++ Roaddata::getStationList() done ++" << endl;
+#endif
+		theConn->disconnect();
+		delete theConn;
+		theConn = NULL;
+		return 1;
+	}
+	catch (...)
+	{
+		// If we get here, Xaction has been rolled back
+		cerr << "Roaddata::getStationList(), failed!" << endl;
+		cerr << "query: " << query << endl;
+#ifdef DEBUGPRINT
+		cerr << "++ Roaddata::getStationList() done ++" << endl;
+#endif
+		theConn->disconnect();
+		delete theConn;
+		theConn = NULL;
+		return 1;
+	}
+
+
+
+	theConn->disconnect();
+	delete theConn;
+	theConn = NULL;
+#ifdef DEBUGPRINT
+	cerr << "++ Roaddata::getStationList() done sucessfully ++" << endl;
+#endif
+	return noOfStations;
+}
+
+Roaddata::Roaddata(const string &databasefile, const string &stationfile, const string &parameterfile, const miTime &obstime)
 {
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::Roaddata( databasefile = " << databasefile << " stationfile: " << stationfile << " parameterfile: " << parameterfile << " obstime: " << obstime.isoTime() << " ) ++" << endl;
@@ -149,17 +379,17 @@ Roaddata::Roaddata(const miString &databasefile, const miString &stationfile, co
 	initDone = initRoaddata(databasefile);
 	diParam::initParameters(parameterfile);
 	diStation::initStations(stationfile);
-	map<miString, vector<diStation> * >::iterator its = diStation::station_map.find(stationfile);
+	map<string, vector<diStation> * >::iterator its = diStation::station_map.find(stationfile);
 	if (its != diStation::station_map.end())
 	{
 		stations = its->second;
 	}
-	map<miString, vector<diParam> * >::iterator itp = diParam::params_map.find(parameterfile);
+	map<string, vector<diParam> * >::iterator itp = diParam::params_map.find(parameterfile);
 	if (itp != diParam::params_map.end())
 	{
 		params = itp->second;
 	}
-	map<miString, set<int> * >::iterator itr = diParam::roadparams_map.find(parameterfile);
+	map<string, set<int> * >::iterator itr = diParam::roadparams_map.find(parameterfile);
 	if (itr != diParam::roadparams_map.end())
 	{
 		roadparams = itr->second;
@@ -186,7 +416,7 @@ int road::Roaddata::open()
 }
 
 
-int road::Roaddata::initData(const vector<miString> & parameternames, map<int, miString> & lines)
+int road::Roaddata::initData(const vector<string> & parameternames, map<int, string> & lines)
 {
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::initData() ++" << endl;
@@ -194,7 +424,7 @@ int road::Roaddata::initData(const vector<miString> & parameternames, map<int, m
     
 	// just a dummy map returned withe empty data
 	int j;
-	vector<miString> tmpresult;
+	vector<string> tmpresult;
 	if (params == NULL)
 	{
 		cerr << "Roaddata::initData(), parameter map not initialized " << endl;
@@ -218,8 +448,8 @@ int road::Roaddata::initData(const vector<miString> & parameternames, map<int, m
 		tmpresult.push_back("-32767.0");
 	}
 
-	map<miTime, map<int, miString > >::iterator itc = road_cache.find(obstime_);
-	map<int, miString > tmp_data;
+	map<miTime, map<int, string > >::iterator itc = road_cache.find(obstime_);
+	map<int, string > tmp_data;
 	bool found = false;
 	if (itc != road_cache.end())
 	{
@@ -232,7 +462,7 @@ int road::Roaddata::initData(const vector<miString> & parameternames, map<int, m
 	int noOfStations = stations->size();
 	if (found)
 	{
-		map<int,miString>::iterator itd = tmp_data.begin();
+		map<int,string>::iterator itd = tmp_data.begin();
 		for (i = 0; i < noOfStations; i++)
 		{
 			itd = tmp_data.find((*stations)[i].stationID());
@@ -249,23 +479,23 @@ int road::Roaddata::initData(const vector<miString> & parameternames, map<int, m
 				char buf[1024];
 				if ((*stations)[i].station_type() == road::diStation::WMO)
 				{
-					sprintf(buf, "%d %s %s %f %f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+					sprintf(buf, "%d|%s|%s|%f|%f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 				}
 				else if ((*stations)[i].station_type() == road::diStation::ICAO)
 				{
-					sprintf(buf, "%s %s %s %f %f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+					sprintf(buf, "%s|%s|%s|%f|%f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 				}
 				else if ((*stations)[i].station_type() == road::diStation::SHIP)
 				{
-					miString call_sign_ = (*stations)[i].call_sign();
-					call_sign_.trim(true, true, " ");
-					call_sign_.replace(" ", "_");
-					sprintf(buf, "%s %s %s %f %f", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+					string call_sign_ = (*stations)[i].call_sign();
+					//call_sign_.trim(true, true, " ");
+					//call_sign_.replace(" ", "_");
+					sprintf(buf, "%s|%s|%s|%f|%f", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 				}
-				miString line(buf);
+				string line(buf);
 				for (j = 0; j < tmpresult.size(); j++)
 				{
-					line = line + " " + tmpresult[j];
+					line = line + "|" + tmpresult[j];
 				}
 				lines[(*stations)[i].stationID()] = line;
 			}
@@ -277,12 +507,27 @@ int road::Roaddata::initData(const vector<miString> & parameternames, map<int, m
 		for (i = 0; i < noOfStations; i++)
 		{
 
+			// No data for this station, just retrun faked data
 			char buf[1024];
-			sprintf(buf, "%d %s %s %f %f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
-			miString line(buf);
+			if ((*stations)[i].station_type() == road::diStation::WMO)
+			{
+				sprintf(buf, "%d|%s|%s|%f|%f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+			}
+			else if ((*stations)[i].station_type() == road::diStation::ICAO)
+			{
+				sprintf(buf, "%s|%s|%s|%f|%f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+			}
+			else if ((*stations)[i].station_type() == road::diStation::SHIP)
+			{
+				string call_sign_ = (*stations)[i].call_sign();
+				//call_sign_.trim(true, true, " ");
+				//call_sign_.replace(" ", "_");
+				sprintf(buf, "%s|%s|%s|%f|%f", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+			}
+			string line(buf);
 			for (j = 0; j < tmpresult.size(); j++)
 			{
-				line = line + " " + tmpresult[j];
+				line = line + "|" + tmpresult[j];
 			}
 			lines[(*stations)[i].stationID()] = line;
 
@@ -294,7 +539,7 @@ int road::Roaddata::initData(const vector<miString> & parameternames, map<int, m
 
 return 0;
 }
-int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int, miString> & lines)
+int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int, string> & lines)
 {
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::getData() ++" << endl;
@@ -329,6 +574,16 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 		return 1;
 	}
 
+	int noOfStations = stations->size();
+
+	if (noOfStations == 0)
+	{
+		cerr << "Roaddata::getData(), empty station list " << endl;
+#ifdef DEBUGPRINT
+	cerr << "++ Roaddata::getData() done, return 1 ++" << endl;
+#endif
+		return 1;
+	}
 
 	char tmpPara[32];
 	char parameters[1024];
@@ -348,10 +603,10 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 		parameters[strlen(parameters) - 1] = '\0';
 
 	// now, we shall use the cache
-	// map<miTime, map<int, miString> > road_cache;
+	// map<miTime, map<int, string> > road_cache;
 
-	map<miTime, map<int, miString > >::iterator itc = road_cache.find(obstime_);
-	map<int, miString > tmp_data;
+	map<miTime, map<int, string > >::iterator itc = road_cache.find(obstime_);
+	map<int, string > tmp_data;
 	bool found = false;
 	if (itc != road_cache.end())
 	{
@@ -360,10 +615,9 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 		tmp_data = itc->second;
 		found = true;
 	}
-	int noOfStations = stations->size();
 	
-	map<int,miString>::iterator itm = diStation::dataproviders[stationfile_].begin();
-	map<int,miString>::iterator itd = tmp_data.begin();
+	map<int,string>::iterator itm = diStation::dataproviders[stationfile_].begin();
+	map<int,string>::iterator itd = tmp_data.begin();
 
 	// Create the threads in threadpool
 	// The threadpool is an instance variable...
@@ -491,7 +745,7 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 		parameters[strlen(parameters) - 1] = '\0';
 
 	// now, we shall use the cache
-	// map<miTime, map<int, miString> > road_cache;
+	// map<miTime, map<int, string> > road_cache;
 
 	map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > >::iterator itc = road_multi_cache.begin();
 	map<int, vector<RDKCOMBINEDROW_2 > > tmp_data;
@@ -508,7 +762,7 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 	int noOfStations = stations->size();
 	char place_id[512];
 	
-	map<int,miString>::iterator itm = diStation::dataproviders[stationfile_].begin();
+	map<int,string>::iterator itm = diStation::dataproviders[stationfile_].begin();
 	map<int, vector<RDKCOMBINEDROW_2 > >::iterator itd = tmp_data.begin();
 	// start the threads
 	connection * theConn = NULL;
@@ -519,6 +773,7 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 retry:
 	try {
 		theConn = new connection(connect_str);
+		theConn->set_client_encoding("LATIN6");
 	}
 	catch (pqxx_exception &e)
 	{
@@ -622,7 +877,7 @@ WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.i
 							// OBS! Multiple place id for one station
 							for (int j = 0; j < res.size(); j++)
 							{
-								result::tuple row = res.at(j);
+								tuple row = res.at(j);
 								cout << row["wmo_block"].c_str() << ": " << row["wmo_number"].c_str() << ": " << row["station_name"].c_str()
 									<< ": " << row["lat"].c_str()<< ": " << row["lon"].c_str()<< ": " << row["position_id"].c_str()
 									<< ": " << row["validtime_from"].c_str()<< ": " << row["validtime_to"].c_str()<< ": " << row["height_above_mean_sea_level"].c_str()<< endl;
@@ -644,7 +899,7 @@ WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.i
 							strcpy(place_id, "0");
 						}
 						// we can use the place_id as a dataprovider
-						diStation::addDataProvider(stationfile_, (*stations)[i].stationID(), miString(place_id));
+						diStation::addDataProvider(stationfile_, (*stations)[i].stationID(), string(place_id));
 
 						// If we get here, work is committed
 					}
@@ -656,6 +911,13 @@ WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.i
 							std::cerr << "Query was: " << s->query() << std::endl;
 						else
 							std::cerr << "Query was: " << query << std::endl;
+#ifdef DEBUGPRINT
+						cerr << "++ Roaddata::getData() done ++" << endl;
+#endif
+						theConn->disconnect();
+						delete theConn;
+						theConn = NULL;
+						return 1;
 					}
 					catch (...)
 					{
@@ -712,7 +974,7 @@ AS diana_aerosond_observation_wiew where position_id in (%s) and parameter_id in
 						(*stations)[i].setData(true);
 						for (int j = 0; j < nTmpRows; j++)
 						{
-							result::tuple row = res.at(j);
+							tuple row = res.at(j);
 
 #ifdef DEBUGPRINT
 								cout << row[ wmo_block ].c_str() << ": " << row[ wmo_number ].c_str() << ": " << row[ position_id ].c_str()
@@ -829,6 +1091,13 @@ AS diana_aerosond_observation_wiew where position_id in (%s) and parameter_id in
 						std::cerr << "Query was: " << s->query() << std::endl;
 					else
 						std::cerr << "Query was: " << query << std::endl;
+#ifdef DEBUGPRINT
+					cerr << "++ Roaddata::getData() done ++" << endl;
+#endif
+					theConn->disconnect();
+					delete theConn;
+					theConn = NULL;
+					return 1;
 				}
 				catch (...)
 				{

@@ -38,7 +38,7 @@
 #include <map>
 #include <queue>
 #include <puTools/miTime.h>
-#include <puTools/miString.h>
+#include <puTools/miStringFunctions.h>
 //#include <pgconpool/dbConnectionPool.h>
 #include <newarkAPI/diStation.h>
 #include <newarkAPI/diParam.h>
@@ -83,6 +83,29 @@ const int observation_sampling_time= 20;
 const int offset_from_time_tick= 21;
 const int value_version_number= 22;
 
+const int s_ship_id = 0;
+const int s_sender_id = 1;
+const int s_lat = 2;
+const int s_lon = 3;
+const int s_parameter_id = 4;
+const int s_level_parameter_id = 5;
+const int s_level_from = 6;
+const int s_level_to = 7;
+const int s_level_parameter_unit_name = 8;
+const int s_statistics_type = 9;
+const int s_value = 10;
+const int s_parameter_unit = 11;
+const int s_quality = 12;
+const int s_automation_code = 13;
+const int s_reference_time = 14;
+const int s_valid_from = 15;
+const int s_valid_to = 16;
+const int s_observation_master_id = 17;
+const int s_time_tick = 18;
+const int s_observation_sampling_time_seconds = 19;
+const int s_offset_from_time_tick_seconds = 20;
+const int s_value_version_number = 21;
+
 
 // the job struct
   struct jobInfo {
@@ -106,17 +129,17 @@ private:
   vector <road::diParam> * params;
   std::set<int> * roadparams;
   const vector<road::diStation> & stations_to_plot;
-  map<int, miString > & tmp_data;
-  map<int, miString> & lines;
+  map<int, string > & tmp_data;
+  map<int, string> & lines;
   std::string connect_str;
   char parameters[1024];
-  miString stationfile_;
+  string stationfile_;
   //DbConnectionPoolPtr thePool_;
 
  
 public:
   bool stop;
-  RoadDataThread(const vector<road::diStation> & in_stations_to_plot, map<int, miString > & in_tmp_data, map<int, miString> & in_lines);
+  RoadDataThread(const vector<road::diStation> & in_stations_to_plot, map<int, string > & in_tmp_data, map<int, string> & in_lines);
   virtual ~RoadDataThread();
   void addJob(int stationindex, const miTime &obstime);
   int getNoOfJobs();
@@ -125,10 +148,10 @@ public:
   void setParams(vector <road::diParam> * in_params){params=in_params;};
   void setRoadparams(std::set<int> * in_roadparams){roadparams=in_roadparams;};
   //void setStationsToPlot(const vector<road::diStation> & in_stations_to_plot) {stations_to_plot = in_stations_to_plot;};
-  void setTmpData(map<int, miString > & in_tmp_data){tmp_data = in_tmp_data;};
-  void setLines(map<int, miString> & in_lines){lines = in_lines;};
+  void setTmpData(map<int, string > & in_tmp_data){tmp_data = in_tmp_data;};
+  void setLines(map<int, string> & in_lines){lines = in_lines;};
   void setParameters(const char * in_parameters){strcpy(parameters, in_parameters);};
-  void setStationFile(const miString & stationfile){stationfile_ = stationfile;};
+  void setStationFile(const string & stationfile){stationfile_ = stationfile;};
   //void setPool(DbConnectionPoolPtr & in_pool){thePool_=in_pool;};
   void setConnectString(const std::string & in_str){connect_str = in_str;};
   void run();
