@@ -34,6 +34,8 @@
 #endif
 
 #include <diStation.h>
+// For the dynamic station list
+#include "diRoaddata.h"
 #include <vector>
 #include <float.h>
 #include <iostream>
@@ -68,14 +70,15 @@ int road::diStation::initStations(string stationfile)
 	if (its == station_map.end())
 	{
 		vector <diStation> * stations = new vector <diStation>;
-		char buf[255];
+		char buf[1024];
 		ifstream ifs(stationfile.c_str(),ios::in);
 		if (ifs.is_open())
 		{ 
 			int j = 0;
 			while (ifs.good())
 			{
-				ifs.getline(buf,254);
+				buf[0] = '\0';
+				ifs.getline(buf,sizeof(buf)-1);
 				//cerr << buf << endl;
 				string tmp(buf);
 				if (tmp.find("obssource")!= string::npos)
@@ -91,39 +94,26 @@ int road::diStation::initStations(string stationfile)
 						station_type = road::diStation::FLIGHT;
 					continue;
 				}
-				//cerr << tmp << endl;
-				diStation station;
-				station.setStationType(station_type);
-				station.setStation(tmp);
-				// Compare the station to ALL the prev ones...
-				if (j > 0)
+				//Check if the stationlist is dynamic
+				// NOTE: The sql statement must be in one line in file
+				if (miutil::contains(miutil::to_upper(stationfile),".SQL"))
 				{
-				
-					bool found = false;
-					int length = stations->size();
-					for (int i = 0; i < length; i++)
-					{
-						found = station.equalStation((*stations)[i]);
-						if (found)
-							break;
-					}
-					if (!found)
-					{
-						j++;
-						station.setStationID(j);
-#ifdef DEBUGPRINT
-				cerr << station.toSend() << endl;
-#endif
-						stations->push_back(station);
-					}
+					// if an error occurs, the error will bee handled in getStationList. The result will be an empty station list.
+					int result = road::Roaddata::getStationList(tmp, stations, station_type);
+					break;
 				}
 				else
 				{
+					// Fixed station list, check for duplicates removed!
+					diStation station;
+					station.setStationType(station_type);
+					station.setStation(tmp);
+
 					// first station must always be added
 					j++;
 					station.setStationID(j);
 #ifdef DEBUGPRINT
-				cerr << station.toSend() << endl;
+					cerr << station.toSend() << endl;
 #endif
 					stations->push_back(station);
 				}
