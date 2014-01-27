@@ -35,9 +35,6 @@
 
 #include <map>
 #include <vector>
-#include <QThread>
-#include <QMutex>
-#include <QMutexLocker>
 #include <puTools/miStringFunctions.h>
 #include <puTools/miTime.h>
 
@@ -85,7 +82,6 @@ namespace road {
     bool static_;
 	bool data_;
     miutil::miTime fromtime_;
-	static QMutex stationMutex;
 
 
   public:

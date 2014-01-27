@@ -14,6 +14,9 @@
 //#include <pgconpool/dbConnectionPool.h>
 //#include <pgconpool/dbConnection.h>
 #include "diParam.h"
+#include <boost/thread.hpp>
+#include <boost/bind.hpp>
+#include <boost/thread/mutex.hpp>
 #include "diRoaddatathread.h"
 #include <set>
 
@@ -622,6 +625,9 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 	// Create the threads in threadpool
 	// The threadpool is an instance variable...
 	// set pointers to data members i the threads
+
+	vector<RoadDataThread*> workerPool;
+
 	int poolsize = THREAD_POOL_SIZE;
 	for (int i = 0; i < poolsize; i++)
 	{
@@ -635,42 +641,48 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 			theThread->setParameters(parameters);
 		    //theThread->setPool(thePool);
 			theThread->setConnectString(connect_str);
-			threadPool.push_back(theThread);
+			workerPool.push_back(theThread);
 		}
 	}
-	// start the threads...
-	int noThreads = threadPool.size();
+	// add jobs to workers...
+	int noWorkers = workerPool.size();
 	
 	int j = 0;
 	for (int i = 0; i < noOfStations; i++)
 	{
 		// let the started threads get the job description
-		if ((j%noThreads)== 0)
+		if ((j%noWorkers)== 0)
 			j = 0;
 		// only add job once
-		RoadDataThread * theThread = threadPool[j];
+		RoadDataThread * theThread = workerPool[j];
 		theThread->addJob(i,obstime_);
 		j++;
 	} // END For noOfStations
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::getData() starting the threads ++" << endl;
 #endif
-	for (int k = 0; k < noThreads; k++)
+	// Create the boost threads
+	std::vector<boost::shared_ptr<boost::thread> > threads;
+	for (size_t k = 0; k < noWorkers; k++)
 	{
-		RoadDataThread * theThread = threadPool[k];
-		theThread->start();
+		// The threads start immediately working
+		// so we must not change the state here.
+		boost::shared_ptr<boost::thread> thread = boost::shared_ptr<boost::thread>(new boost::thread(*workerPool[k]));
+		threads.push_back(thread);
 		
 	}
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::getData() waiting for the threads ++" << endl;
 #endif
 	// stop the threads...
-	for (int i = 0; i < noThreads; i++)
+	for (size_t i = 0; i < threads.size(); i++)
 	{
-		RoadDataThread * theThread = threadPool[i];
-		//theThread->stop = true;
-		theThread->wait();
-		delete theThread;
+		// wait for them to terminate.
+		threads[i]->join();
+	}
+	// Clean up the workers...
+	for (size_t i = 0; i < noWorkers; i++) {
+		delete workerPool[i];
 	}
 	// what to do with the tmp_map and road_cache
 	// we must check if the tmp_map was already in road_cache or if it is a new one

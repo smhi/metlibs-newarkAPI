@@ -31,9 +31,8 @@
 
 #ifndef diRoadDataThread_h
 #define diRoadDataThread_h
-#include <QThread>
-#include <QMutex>
-#include <QMutexLocker>
+#include <string.h>
+#include <boost/thread/mutex.hpp>
 #include <vector>
 #include <map>
 #include <queue>
@@ -112,15 +111,14 @@ const int s_value_version_number = 21;
     int stationindex_;
     miTime obstime_;
   };
-class RoadDataThread: public QThread {
-
-Q_OBJECT
+class RoadDataThread {
 
 private:
   queue<jobInfo> jobs;
   // must be on a per thread basis
-  QMutex jobMutex;
-  static QMutex outMutex;
+  //QMutex jobMutex;
+  static boost::mutex _outMutex;
+  //static QMutex outMutex;
   jobInfo getNextJob(void);
   int noOfJobs;
   int getJobSize(void);
@@ -154,7 +152,7 @@ public:
   void setStationFile(const string & stationfile){stationfile_ = stationfile;};
   //void setPool(DbConnectionPoolPtr & in_pool){thePool_=in_pool;};
   void setConnectString(const std::string & in_str){connect_str = in_str;};
-  void run();
+  void operator ()();
   
 };
 

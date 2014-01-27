@@ -46,7 +46,6 @@
 
 using namespace std;
 using namespace miutil;
-QMutex road::diStation::stationMutex;
 const float road::diStation::FLT_NULL=FLT_MAX;
 const int   road::diStation::INT_NULL=INT_MAX;
 const std::string road::diStation::TEXT_NULL("");
@@ -60,8 +59,6 @@ map<string, vector<road::diStation::diStation> * > road::diStation::station_map;
 
 int road::diStation::initStations(string stationfile)
 {
-	// init the class mutex
-	QMutexLocker l(&stationMutex);
 	// init iterator
 	map<string, vector<diStation> * >::iterator its = road::diStation::station_map.begin();
 	// find
@@ -128,7 +125,6 @@ int road::diStation::initStations(string stationfile)
 
 void road::diStation::addDataProvider(const string & stationfile, const int & wmono, const string & dataprovider)
 {
-	QMutexLocker l(&stationMutex);
 	diStation::dataproviders[stationfile][wmono] = dataprovider;
 }
 

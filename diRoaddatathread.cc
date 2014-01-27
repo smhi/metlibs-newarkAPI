@@ -52,11 +52,11 @@ using namespace road;
 //#define DEBUGSQL 1
 //#define DEBUGPRINT 1
 
-QMutex RoadDataThread::outMutex;
+boost::mutex RoadDataThread::_outMutex;
 // Default constructor protected
 RoadDataThread::RoadDataThread(const vector<road::diStation> & in_stations_to_plot, map<int, string > & in_tmp_data, map<int, string> & in_lines)
-:QThread(NULL),stations_to_plot(in_stations_to_plot), tmp_data(in_tmp_data), lines(in_lines){
-	QMutexLocker l(&outMutex);
+:stations_to_plot(in_stations_to_plot), tmp_data(in_tmp_data), lines(in_lines){
+	boost::mutex::scoped_lock lock(_outMutex);
 	stop = false;
 	noOfJobs = 0;
 	stations = NULL;
@@ -70,7 +70,6 @@ RoadDataThread::~RoadDataThread(){
 jobInfo RoadDataThread::getNextJob(void)
 {
 	// the vector works like a FIFO
-	QMutexLocker l(&jobMutex);
 	jobInfo info = jobs.front();
 #ifdef DEBUGPRINT
 	//cerr << "++ Roaddatathread::getNextJob( " << info.stationindex_ << ", " << info.obstime_ << " ) ++" << endl;
@@ -83,7 +82,6 @@ jobInfo RoadDataThread::getNextJob(void)
 void RoadDataThread::addJob(int stationindex, const miTime &obstime)
 {
 	// the vector works like a FIFO
-	QMutexLocker l(&jobMutex);
 #ifdef DEBUGPRINT
 	//cerr << "++ Roaddatathread::addJob( " << stationindex << ", " << obstime << " ) ++" << endl;
 #endif
@@ -97,13 +95,11 @@ void RoadDataThread::addJob(int stationindex, const miTime &obstime)
 
 int RoadDataThread::getJobSize(void)
 {
-	QMutexLocker l(&jobMutex);
 	return jobs.size();
 }
 
 int RoadDataThread::getNoOfJobs()
 {
-	QMutexLocker l(&jobMutex);
 	return noOfJobs;
 }
 
@@ -113,7 +109,7 @@ void RoadDataThread::decNoOfJobs(void)
 }
 
 
-void RoadDataThread::run()
+void RoadDataThread::operator ()()
 {
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddatathread::run() ++" << endl;
@@ -135,14 +131,12 @@ retry:
 #endif
 		if (retries >= 10)
 		{
-			exit(1);
-			stop = true;
-			theConn = NULL;
+			return;
 		}
 		else
 		{
 			retries++;
-			QThread::sleep ( 1 );
+			sleep ( 1 );
 			goto retry;
 		}
 	}
@@ -152,9 +146,7 @@ retry:
 #ifdef DEBUGPRINT
 		cerr << "++ Roaddatathread::run() done ++" << endl;
 #endif
-		theConn = NULL;
-		exit(1);
-		stop = true;
+		return;
 	}
 	while (!stop)
 	{
@@ -210,7 +202,7 @@ retry:
 			{
 				// just return the cached data
 				// write operations
-				QMutexLocker l(&outMutex);
+				boost::mutex::scoped_lock lock(_outMutex);
 				lines[(*stations)[i].stationID()] = itd->second;
 				(*stations)[i].setData(true);
 				//lines.push_back(itd->second);
@@ -312,7 +304,7 @@ retry:
 								for (int m = 0; m < res.size(); m++)
 								{
 #ifdef WIN32
-									QMutexLocker l(&outMutex);
+									boost::mutex::scoped_lock lock(_outMutex);
 #endif
 									tuple row = res.at(m);
 #ifdef DEBUGPRINT
@@ -367,6 +359,7 @@ retry:
 								strcpy(place_id, "0");
 							}
 							// we can use the place_id as a dataprovider
+							boost::mutex::scoped_lock lock(_outMutex);
 							diStation::addDataProvider(stationfile_, (*stations)[i].stationID(), string(place_id));
 							
 
@@ -385,7 +378,6 @@ retry:
 							theConn->disconnect();
 							delete theConn;
 							theConn = NULL;
-							exit(1);
 							stop = true;
 							break;
 
@@ -401,7 +393,6 @@ retry:
 							theConn->disconnect();
 							delete theConn;
 							theConn = NULL;
-							exit(1);
 							stop = true;
 							break;
 						}
@@ -504,7 +495,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 							for (int m = 0; m < nTmpRows; m++)
 							{
 #ifdef WIN32
-								QMutexLocker l(&outMutex);
+								boost::mutex::scoped_lock lock(_outMutex);
 #endif
 								tuple row = res.at(m);
 
@@ -752,7 +743,6 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 						theConn->disconnect();
 						delete theConn;
 						theConn = NULL;
-						exit(1);
 						stop = true;
 						break;
 					}
@@ -767,7 +757,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 						theConn->disconnect();
 						delete theConn;
 						theConn = NULL;
-						exit(1);
+
 						stop = true;
 						break;
 					}
@@ -805,14 +795,15 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 					// write operations to common objekts
 					if (nTmpRows)
 					{
-						// return and save in temporary cache
-						QMutexLocker l(&outMutex);
+						// We must protect these maps
+						boost::mutex::scoped_lock lock(_outMutex);
 						lines[(*stations)[i].stationID()] = line;
 						tmp_data[(*stations)[i].stationID()] = line;
 					}
 					else
 					{
-						QMutexLocker l(&outMutex);
+						// We must protect these maps
+						boost::mutex::scoped_lock lock(_outMutex);
 						lines[(*stations)[i].stationID()] = line;
 
 					}
@@ -823,7 +814,8 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 					{
 						line = line + "|" + tmpresult[j];
 					}
-					QMutexLocker l(&outMutex);
+					// We must protect these maps
+					boost::mutex::scoped_lock lock(_outMutex);
 					lines[(*stations)[i].stationID()] = line;
 
 				} // END toplot
@@ -841,7 +833,6 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddatathread::run() done ++" << endl;
 #endif
-	exit();
 }
 
 

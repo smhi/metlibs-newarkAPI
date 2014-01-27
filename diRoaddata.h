@@ -77,7 +77,6 @@ private:
 	vector<diStation> * stations;
 	vector <diParam> * params;
 	std::set<int> * roadparams;
-	vector<RoadDataThread*> threadPool;
 	
 public:
     static bool initDone;
