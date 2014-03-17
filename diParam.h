@@ -31,7 +31,7 @@
 #define __diParam_h__
 #include <puTools/miStringFunctions.h>
 #include <puTools/miTime.h>
-#include <newarkAPI/rdkESQLTypes.h>
+#include "rdkESQLTypes.h"
 #include <set>
 #include <vector>
 #include <map>

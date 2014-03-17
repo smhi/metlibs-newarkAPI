@@ -40,7 +40,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include <rdkAPI/rdkESQLTypes.h>
+#include "rdkESQLTypes.h"
 #include <float.h>
 
 //#define DEBUGPRINT 1

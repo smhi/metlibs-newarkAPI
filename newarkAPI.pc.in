@@ -6,6 +6,6 @@ includedir=@includedir@
 Name: newarkAPI
 Description: The newarkAPI Library
 Version: @VERSION@
-Requires: @newarkAPI_pc_requires@
-Libs: -L${libdir} -lnewarkAPI @PGCONPOOL_LDFLAGS@ @PGCONPOOL_LIBS@
+Requires:  puTools >= 5.0.0
+Libs: -L${libdir} -lnewarkAPI @PQXX_LDFLAGS@ @PQXX_LIBS@
 Cflags: -I${includedir}

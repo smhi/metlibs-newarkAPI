@@ -40,10 +40,10 @@
 #include <string>
 #include <puTools/miTime.h>
 #include <puTools/miStringFunctions.h>
-#include <newarkAPI/diStation.h>
-#include <newarkAPI/diParam.h>
-#include <newarkAPI/diRoaddatathread.h>
-#include <newarkAPI/rdkESQLTypes.h>
+#include "diStation.h"
+#include "diParam.h"
+#include "diRoaddatathread.h"
+#include "rdkESQLTypes.h"
 
 // the class definition here...
 using namespace std;

@@ -2,30 +2,37 @@
 
 pkgname = newarkAPI
 
-include $(top_srcdir)/metlibs.mk
+#include $(top_srcdir)/metlibs.mk
+
+ACLOCAL_AMFLAGS = -I m4
 
 lib_LTLIBRARIES = libnewarkAPI.la
 
 libnewarkAPI_la_SOURCES = diParam.cc diStation.cc diRoaddata.cc diRoaddatathread.cc
 
 libnewarkAPI_la_CPPFLAGS = \
-	${PGCONPOOL_CPPFLAGS} \
+	${PQXX_CPPFLAGS} \
+	${PUTOOLS_CPPFLAGS} \
 	${BOOST_CPPFLAGS}
 
 if ENABLE_SHARED_LIBRARY
 libnewarkAPI_la_LDFLAGS = \
-	${PGCONPOOL_LDPLAGS} \
+	${PQXX_LDPLAGS} \
 	${PUTOOLS_LDFLAGS} \
 	${BOOST_LDFLAGS}
 
 libnewarkAPI_la_LIBADD = \
-	${PGCONPOOL_LIBS} \
+	${PQXX_LIBS} \
 	${PUTOOLS_LIBS} \
 	${BOOST_LIBS} \
 	${BOOST_THREAD_LIBS}
 endif
 
+pkgconfigdir = $(libdir)/pkgconfig
+
 pkg_includedir = ${includedir}/newarkAPI
+
+pkgconfig_DATA = newarkAPI.pc
 
 pkg_include_HEADERS = \
     rdkESQLTypes.h \
@@ -33,3 +40,4 @@ pkg_include_HEADERS = \
 	diRoaddata.h \
 	diRoaddatathread.h \
 	diStation.h
+INSTALL=install -p # tells install to preserve timestamp
