@@ -7,5 +7,5 @@ Name: newarkAPI
 Description: The newarkAPI Library
 Version: @VERSION@
 Requires:  puTools >= 5.0.0
-Libs: -L${libdir} -lnewarkAPI @PQXX_LDFLAGS@ @PQXX_LIBS@
+Libs: -L${libdir} -lnewarkAPI @PQXX_LDFLAGS@ @PQXX_LIBS@ @PQSQL_LDFLAGS@ @PQSQL_LIBS@
 Cflags: -I${includedir}
