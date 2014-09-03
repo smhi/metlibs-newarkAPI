@@ -35,7 +35,9 @@ string road::Roaddata::user = "";
 string road::Roaddata::passwd = "";
 std::string road::Roaddata::connect_str = "";
 bool road::Roaddata::initDone = false;
+map<std::string, map<miTime, map<int, string > > > road::Roaddata::road_data_cache;
 map<miTime, map<int, string > > road::Roaddata::road_cache;
+map<std::string, map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > > road::Roaddata::road_data_multi_cache;
 map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > road::Roaddata::road_multi_cache;
 
 //#define DEBUGPRINT 1
@@ -450,17 +452,30 @@ int road::Roaddata::initData(const vector<string> & parameternames, map<int, str
 	{
 		tmpresult.push_back("-32767.0");
 	}
-
-	map<miTime, map<int, string > >::iterator itc = road_cache.find(obstime_);
+	// First, find the correct selection of stations
+	map<std::string, map<miTime, map<int, string > > >::iterator itb = road_data_cache.find(stationfile_);
+	map<miTime, map<int, string > > tmp_road_cache;
 	map<int, string > tmp_data;
-	bool found = false;
-	if (itc != road_cache.end())
+	bool road_data_cahce_found = false;
+	if (itb != road_data_cache.end())
 	{
-		// data in cache for this obstime
-		// make a copy of it
-		tmp_data = itc->second;
-		found = true;
+		tmp_road_cache = itb->second;
+		road_data_cahce_found = true;
 	}
+	bool found = false;
+	if (road_data_cahce_found)
+	{
+		// Then, find the correct selection of obstime
+		map<miTime, map<int, string > >::iterator itc = tmp_road_cache.find(obstime_);
+		if (itc != tmp_road_cache.end())
+		{
+			// data in cache for this obstime
+			// make a copy of it
+			tmp_data = itc->second;
+			found = true;
+		}
+	}
+
 	int i;
 	int noOfStations = stations->size();
 	if (found)
@@ -542,7 +557,8 @@ int road::Roaddata::initData(const vector<string> & parameternames, map<int, str
 
 return 0;
 }
-int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int, string> & lines)
+
+int road::Roaddata::getData(const vector<int> & index_stations_to_plot, map<int, string> & lines)
 {
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::getData() ++" << endl;
@@ -588,6 +604,19 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 		return 1;
 	}
 
+	std::vector<road::diStation> stations_to_plot;
+  // use in_stations_to_plot info to fill the stations_to_plot.
+  for (size_t i=0; i<index_stations_to_plot.size(); i++) {
+		//cerr << (*stations)[index_stations_to_plot[i]].toSend() << endl;
+    stations_to_plot.push_back((*stations)[index_stations_to_plot[i]]);
+  }
+
+	if (stations_to_plot.size() == 0)
+	{
+		// copy the whole station list
+		stations_to_plot = *stations;
+	}
+
 	char tmpPara[32];
 	char parameters[1024];
 	int k = 0;
@@ -608,15 +637,28 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 	// now, we shall use the cache
 	// map<miTime, map<int, string> > road_cache;
 
-	map<miTime, map<int, string > >::iterator itc = road_cache.find(obstime_);
+	// First, find the correct selection of stations
+	map<std::string, map<miTime, map<int, string > > >::iterator itb = road_data_cache.find(stationfile_);
+	map<miTime, map<int, string > > tmp_road_cache;
 	map<int, string > tmp_data;
-	bool found = false;
-	if (itc != road_cache.end())
+	bool road_data_cahce_found = false;
+	if (itb != road_data_cache.end())
 	{
-		// data in cache for this obstime
-		// make a copy of it
-		tmp_data = itc->second;
-		found = true;
+		tmp_road_cache = itb->second;
+		road_data_cahce_found = true;
+	}
+	bool found = false;
+	if (road_data_cahce_found)
+	{
+		// Then, find the correct selection of obstime
+		map<miTime, map<int, string > >::iterator itc = tmp_road_cache.find(obstime_);
+		if (itc != tmp_road_cache.end())
+		{
+			// data in cache for this obstime
+			// make a copy of it
+			tmp_data = itc->second;
+			found = true;
+		}
 	}
 	
 	map<int,string>::iterator itm = diStation::dataproviders[stationfile_].begin();
@@ -689,14 +731,26 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 	if (found)
 	{
 		// replace the old one
-		road_cache.erase (road_cache.find(obstime_));
+		tmp_road_cache.erase (tmp_road_cache.find(obstime_));
 		// insert the modified one
-		road_cache[obstime_] = tmp_data;
+		tmp_road_cache[obstime_] = tmp_data;
 	}
 	else
 	{
 		// insert the new one
-		road_cache[obstime_] = tmp_data;
+		tmp_road_cache[obstime_] = tmp_data;
+	}
+	if (road_data_cahce_found)
+	{
+		// replace the old one
+		road_data_cache.erase (road_data_cache.find(stationfile_));
+		// insert the modified one
+		road_data_cache[stationfile_] = tmp_road_cache;
+	}
+	else
+	{
+		// insert the new one
+		road_data_cache[stationfile_] = tmp_road_cache;
 	}
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::getData() done sucessfully ++" << endl;
@@ -759,16 +813,28 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 	// now, we shall use the cache
 	// map<miTime, map<int, string> > road_cache;
 
-	map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > >::iterator itc = road_multi_cache.begin();
+	// First, find the correct selection of stations
+	map<std::string, map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > >::iterator itb = road_data_multi_cache.find(stationfile_);
+	map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > tmp_road_multi_cache;
 	map<int, vector<RDKCOMBINEDROW_2 > > tmp_data;
-	bool found = false;
-	itc = road_multi_cache.find(obstime_);
-	if (itc != road_multi_cache.end())
+	bool road_data_cahce_found = false;
+	if (itb != road_data_multi_cache.end())
 	{
-		// data in cache for this obstime
-		// make a copy of it
-		tmp_data = itc->second;
-		found = true;
+		tmp_road_multi_cache = itb->second;
+		road_data_cahce_found = true;
+	}
+	bool found = false;
+	if (road_data_cahce_found)
+	{
+		// Then, find the correct selection of obstime
+		map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > >::iterator itc = tmp_road_multi_cache.find(obstime_);
+		if (itc != tmp_road_multi_cache.end())
+		{
+			// data in cache for this obstime
+			// make a copy of it
+			tmp_data = itc->second;
+			found = true;
+		}
 	}
 
 	int noOfStations = stations->size();
@@ -1158,15 +1224,28 @@ AS diana_aerosond_observation_wiew where position_id in (%s) and parameter_id in
 	if (found)
 	{
 		// replace the old one
-		road_multi_cache.erase (road_multi_cache.find(obstime_));
+		tmp_road_multi_cache.erase (tmp_road_multi_cache.find(obstime_));
 		// insert the modified one
-		road_multi_cache[obstime_] = tmp_data;
+		tmp_road_multi_cache[obstime_] = tmp_data;
 	}
 	else
 	{
 		// insert the new one
-		road_multi_cache[obstime_] = tmp_data;
+		tmp_road_multi_cache[obstime_] = tmp_data;
 	}
+	if (road_data_cahce_found)
+	{
+		// replace the old one
+		road_data_multi_cache.erase (road_data_multi_cache.find(stationfile_));
+		// insert the modified one
+		road_data_multi_cache[stationfile_] = tmp_road_multi_cache;
+	}
+	else
+	{
+		// insert the new one
+		road_data_multi_cache[stationfile_] = tmp_road_multi_cache;
+	}
+
 
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::getData() done sucessfully ++" << endl;

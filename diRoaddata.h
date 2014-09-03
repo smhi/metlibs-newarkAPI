@@ -89,7 +89,12 @@ public:
 	// this map maps an obstime to a map from wmo no to a data string.
 	// the second map contains data strings only if there are rows returned 
 	// from road.
+	// We must map to stationfile also for ground observations and in the future also aerosond data
+	static map<std::string, map<miTime, map<int, string > > > road_data_cache;
+	// depricated
 	static map<miTime, map<int, string > > road_cache;
+	// The cache for aerosond data
+	static map<std::string, map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > > road_data_multi_cache;
 	static map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > road_multi_cache;
 	//default constructor
 	Roaddata() {}
@@ -98,7 +103,7 @@ public:
 	Roaddata(const string &databasefile, const string &stationfile, const string &parameterfile, const miTime &obstime);
     ~Roaddata();
 	int open();
-	int getData(const vector<diStation> & stations_to_plot, map<int, string> & lines);
+	int getData(const vector<int> & index_stations_to_plot, map<int, string> & lines);
 	int getData(const vector<diStation> & stations_to_plot, map<int, vector<RDKCOMBINEDROW_2 > > & raw_data_map);
 	int initData(const vector<string> & parameternames, map<int, string> & lines);
 	int close();
