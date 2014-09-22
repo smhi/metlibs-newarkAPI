@@ -671,6 +671,12 @@ int road::Roaddata::getData(const vector<int> & index_stations_to_plot, map<int,
 	vector<RoadDataThread*> workerPool;
 
 	int poolsize = THREAD_POOL_SIZE;
+	// Check if OMP_NUM_THREADS is set
+	char* opnumthreads = getenv("OMP_NUM_THREADS");
+	if (opnumthreads != 0)
+	{
+		poolsize = atoi(opnumthreads);
+	}
 	for (int i = 0; i < poolsize; i++)
 	{
 		RoadDataThread * theThread = new RoadDataThread(stations_to_plot, tmp_data, lines);
