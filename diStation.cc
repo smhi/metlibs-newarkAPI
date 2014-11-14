@@ -54,7 +54,7 @@ const std::string road::diStation::ICAO("ICAO");
 const std::string road::diStation::SHIP("SHIP");
 const std::string road::diStation::FLIGHT("FLIGHT");
 map<string, map<int, string> > road::diStation::dataproviders;
-map<string, vector<road::diStation::diStation> * > road::diStation::station_map;
+map<string, vector<road::diStation> * > road::diStation::station_map;
 
 
 int road::diStation::initStations(string stationfile)
