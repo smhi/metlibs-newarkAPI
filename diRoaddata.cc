@@ -798,7 +798,7 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 #endif
 		return 1;
 	}
-	char query[1024];
+	char query[10240];
 	char tmpPara[32];
 	char parameters[1024];
 	int k = 0;
