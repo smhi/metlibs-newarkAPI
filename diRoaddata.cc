@@ -188,7 +188,7 @@ retry:
 #endif
 		return 0;
 	}
-	char query[1024];
+	char query[10240];
 	// Get the station list
 	try
 	{
