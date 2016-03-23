@@ -713,7 +713,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 										// here we must implement sort conversion
 										(*params)[k].convertValue(crow);
 										if (crow.integervalue_is_null)
-											sprintf(tmpBuf, "%f", crow.floatvalue);
+											sprintf(tmpBuf, "%.1f", crow.floatvalue);
 										else
 											sprintf(tmpBuf, "%i", crow.integervalue);
 										tmpresult[k] = string(tmpBuf);
