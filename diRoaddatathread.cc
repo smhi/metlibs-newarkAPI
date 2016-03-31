@@ -192,7 +192,7 @@ retry:
 			vector<string> tmpresult;
 			for (j = 0; j < params->size(); j++)
 			{
-				tmpresult.push_back("-32767.0");
+				tmpresult.push_back(undef_string);
 			}
 
 			itd = tmp_data.find((*stations)[i].stationID());

@@ -49,7 +49,8 @@ namespace road{
    *
    * @{
    */  
-
+#define undef_string "-32767.0"
+#define undef -32767.0
 
   /**
    * \brief Interface and mapper betwenn diana and road parameter space.
