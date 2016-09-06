@@ -50,7 +50,7 @@ using namespace miutil;
 using namespace road;
 
 //#define DEBUGSQL 1
-//#define DEBUGPRINT 1
+//#define DEBUGROW 1
 
 boost::mutex RoadDataThread::_outMutex;
 // Default constructor protected
@@ -573,7 +573,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 									row[ level_parameter_id ].to(crow.srid);
 									crow.srid=crow.srid + 1000;
 									// Note, the quality are not equal....
-                                                                        strcpy(crow.quality,row[ quality ].c_str());
+                  strcpy(crow.quality,row[ quality ].c_str());
 									// The parameter are the same
 									row[ parameter_id ].to(crow.parameter);
 									// No longer needed, set to 0
@@ -612,7 +612,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 									row[ level_parameter_id -1].to(crow.srid);
 									crow.srid=crow.srid + 1000;
 									// Note, the quality are not equal....
-                                    strcpy(crow.quality,row[ quality - 1 ].c_str());
+                  strcpy(crow.quality,row[ quality - 1 ].c_str());
 									// The parameter are the same
 									row[ parameter_id -1].to(crow.parameter);
 									// No longer needed, set to 0
@@ -651,7 +651,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 									row[ s_level_parameter_id ].to(crow.srid);
 									crow.srid=crow.srid + 1000;
 									// Note, the quality are not equal....
-                                    strcpy(crow.quality,row[ s_quality ].c_str());
+                  strcpy(crow.quality,row[ s_quality ].c_str());
 									// The parameter are the same
 									row[ s_parameter_id ].to(crow.parameter);
 									// No longer needed, set to 0
@@ -665,8 +665,11 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 									row[ s_automation_code ].to(crow.automationcode);
 									strcpy(crow.statisticstype, row[ s_statistics_type ].c_str());
 								}
+                
 
-#ifdef DEBUGPRINT
+                
+
+#ifdef DEBUGROW
 							cerr << crow.integervalue << "," 
 								<< crow.integervalue_is_null << "," 
 								<< crow.floatvalue << ","
@@ -695,10 +698,46 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 								<< crow.statisticstype << endl;
 							cerr << endl;
 #endif
-								// For ship, set lat and long from data here!!
+								
+
+                
+                // For ship, set lat and long from data here!!
 								if (m == 0)
 								{
-									(*stations)[i].setEnvironmentId(crow.automationcode);
+									// Replace obstime with reference time.
+                  miTime refTime_;
+                  int sec = 0;
+                  if ((*stations)[i].station_type() == road::diStation::WMO) {
+                    refTime_.setTime(crow.reftime);
+                    row[ s_offset_from_time_tick_seconds ].to(sec);
+                    refTime_.addSec(-sec);
+                  }
+                  else if ((*stations)[i].station_type() == road::diStation::ICAO) {
+                    refTime_.setTime(crow.reftime);
+                    row[ s_offset_from_time_tick_seconds -1].to(sec);
+                    refTime_.addSec(-sec);
+                  }
+                  else if ((*stations)[i].station_type() == road::diStation::SHIP) {
+                    refTime_.setTime(crow.reftime);
+                    row[ s_offset_from_time_tick_seconds ].to(sec);
+                    refTime_.addSec(-sec);
+                  }
+                  std::vector<std::string> line_tokens = split(line, "|", true);
+                  std::string tmp_line;
+                  for (size_t i = 0; i < line_tokens.size(); i++) {
+                    if (i == 0) {
+                      tmp_line = line_tokens[i];
+                    } else if (i == 1) {
+                      tmp_line = tmp_line + "|" + refTime_.isoDate();
+                    } else if (i == 2) {
+                      tmp_line = tmp_line + "|" + refTime_.isoClock(true,true);
+                    } else {
+                      tmp_line = tmp_line + "|" + line_tokens[i];
+                    }
+                  }
+                  line = tmp_line;
+                  
+                  (*stations)[i].setEnvironmentId(crow.automationcode);
 									if ((*stations)[i].station_type() == road::diStation::SHIP)
 									{
 										(*stations)[i].setLat(crow.geop.lat);
@@ -723,7 +762,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 										break;
 									}
 								}
-							}
+							}  // End of for loop 
 							// Is this necessary....
 							res.clear();
 						}
