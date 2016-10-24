@@ -1,5 +1,5 @@
-Library diMItiff - Version 3.0.0
-Reading mitiff files
+Library newarkAPI.
+Reading observation data from SMHI's real time database (mora) into diana.
 
 Description
 ===========
@@ -7,3 +7,10 @@ Description
 
 Requirements
 ============
+This library depends on puTools and libpqxx.
+https://github.com/metno/metlibs-putools
+https://github.com/jtv/libpqxx
+
+License
+=======
+Diana - A Free Meteorological Visualisation Tool  
