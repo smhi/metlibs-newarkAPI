@@ -28,7 +28,7 @@ METNO_REQUIRE_PKG([PUTOOLS],[puTools])
 
 METNO_REQUIRE_PKG([PQXX],[libpqxx])
 
-METNO_REQUIRE_C_LIBRARY([PQSQL], [pq], [libpq-fe.h], [main])
+#METNO_REQUIRE_C_LIBRARY([PQSQL], [pq], [libpq-fe.h], [main])
 
 METNO_REQUIRE_BOOST
 METNO_REQUIRE_BOOST_FEATURE([thread])
