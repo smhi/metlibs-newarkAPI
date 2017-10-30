@@ -121,7 +121,6 @@ void RoadDataThread::operator ()()
 retry:
 	try {
 		theConn = new connection(connect_str);
-		theConn->set_client_encoding("LATIN6");
 	}
 	catch (pqxx_exception &e)
 	{

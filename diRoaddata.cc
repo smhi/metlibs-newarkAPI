@@ -159,7 +159,6 @@ int road::Roaddata::getStationList(string & inquery, vector <diStation> * & stat
 retry:
 	try {
 		theConn = new connection(connect_str);
-		theConn->set_client_encoding("LATIN6");
 	}
 	catch (pqxx_exception &e)
 	{
@@ -857,7 +856,6 @@ int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int,
 retry:
 	try {
 		theConn = new connection(connect_str);
-		theConn->set_client_encoding("LATIN6");
 	}
 	catch (pqxx_exception &e)
 	{
