@@ -305,7 +305,7 @@ retry:
 #ifdef WIN32
 									boost::mutex::scoped_lock lock(_outMutex);
 #endif
-									tuple row = res.at(m);
+									pqxx::tuple row = res.at(m);
 #ifdef DEBUGPRINT
 									if ((*stations)[i].station_type() == road::diStation::WMO)
 									{
@@ -496,7 +496,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 #ifdef WIN32
 								boost::mutex::scoped_lock lock(_outMutex);
 #endif
-								tuple row = res.at(m);
+								pqxx::tuple row = res.at(m);
 
 #ifdef DEBUGPRINT
 								if ((*stations)[i].station_type() == road::diStation::WMO)
