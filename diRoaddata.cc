@@ -83,16 +83,18 @@ int road::Roaddata::initRoaddata(const string &databasefile)
 			ifs.getline(buf,254);
 			string tmp(buf);
 			token = split(tmp,"=");
-			if (token[0] == "host")
+			if (token.size() == 2) {
+			  if (token[0] == "host")
 				host = token[1];
-			else if (token[0] == "port")
+			  else if (token[0] == "port")
 				port = token[1];
-			else if (token[0] == "dbname")
+			  else if (token[0] == "dbname")
 				dbname = token[1];
-			else if (token[0] == "user")
+			  else if (token[0] == "user")
 				user = token[1];
-			else if (token[0] == "passwd")
+			  else if (token[0] == "passwd")
 				passwd = token[1];
+			}
 
 		}
 		ifs.close();
