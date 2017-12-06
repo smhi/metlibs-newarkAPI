@@ -817,12 +817,11 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 					
 					}
 #endif
-					// TBD: should we append lat and long for mobile data here ???
-					// What if we dont get data from the mobile source ?
-					if ((*stations)[i].station_type() == road::diStation::SHIP)
+          if ((*stations)[i].station_type() == road::diStation::SHIP)
 					{
 						line = line + "|" + from_number((*stations)[i].lat()) + "|" + from_number((*stations)[i].lon());
 					}
+          line = line + "|" + (*stations)[i].station_type() + "|" + from_number((*stations)[i].environmentid()) + "|" + from_number((*stations)[i].data());
 					for (j = 0; j < tmpresult.size(); j++)
 					{
 						line = line + "|" + tmpresult[j];

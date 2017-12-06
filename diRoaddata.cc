@@ -495,21 +495,22 @@ int road::Roaddata::initData(const vector<string> & parameternames, map<int, str
 			else
 			{
 				// No data for this station, just retrun faked data
+        // The fixed part "Name:id: Date:d: Time:t: Lat:lat: Lon:lon: data_type:s auto:r isdata:r "
 				char buf[1024];
 				if ((*stations)[i].station_type() == road::diStation::WMO)
 				{
-					sprintf(buf, "%d|%s|%s|%f|%f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+					sprintf(buf, "%d|%s|%s|%f|%f|%s|%f|%f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon(), (char*)road::diStation::WMO.c_str(),0,0);
 				}
 				else if ((*stations)[i].station_type() == road::diStation::ICAO)
 				{
-					sprintf(buf, "%s|%s|%s|%f|%f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+					sprintf(buf, "%s|%s|%s|%f|%f|%s|%f|%f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon(), (char*) road::diStation::ICAO.c_str(),0,0);
 				}
 				else if ((*stations)[i].station_type() == road::diStation::SHIP)
 				{
 					string call_sign_ = (*stations)[i].call_sign();
 					//call_sign_.trim(true, true, " ");
 					//call_sign_.replace(" ", "_");
-					sprintf(buf, "%s|%s|%s|%f|%f", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+					sprintf(buf, "%s|%s|%s|%f|%f|%s|%f|%f", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon(), (char*) road::diStation::SHIP.c_str(),0,0);
 				}
 				string line(buf);
 				for (j = 0; j < tmpresult.size(); j++)
@@ -527,28 +528,29 @@ int road::Roaddata::initData(const vector<string> & parameternames, map<int, str
 		{
 
 			// No data for this station, just retrun faked data
-			char buf[1024];
-			if ((*stations)[i].station_type() == road::diStation::WMO)
-			{
-				sprintf(buf, "%d|%s|%s|%f|%f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
-			}
-			else if ((*stations)[i].station_type() == road::diStation::ICAO)
-			{
-				sprintf(buf, "%s|%s|%s|%f|%f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
-			}
-			else if ((*stations)[i].station_type() == road::diStation::SHIP)
-			{
-				string call_sign_ = (*stations)[i].call_sign();
-				//call_sign_.trim(true, true, " ");
-				//call_sign_.replace(" ", "_");
-				sprintf(buf, "%s|%s|%s|%f|%f", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
-			}
-			string line(buf);
-			for (j = 0; j < tmpresult.size(); j++)
-			{
-				line = line + "|" + tmpresult[j];
-			}
-			lines[(*stations)[i].stationID()] = line;
+        // The fixed part "Name:id: Date:d: Time:t: Lat:lat: Lon:lon: data_type:s auto:r isdata:r "
+				char buf[1024];
+				if ((*stations)[i].station_type() == road::diStation::WMO)
+				{
+					sprintf(buf, "%d|%s|%s|%f|%f|%s|%f|%f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon(), (char*) road::diStation::WMO.c_str(),0.,0.);
+				}
+				else if ((*stations)[i].station_type() == road::diStation::ICAO)
+				{
+					sprintf(buf, "%s|%s|%s|%f|%f|%s|%f|%f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon(), (char*) road::diStation::ICAO.c_str(),0.,0.);
+				}
+				else if ((*stations)[i].station_type() == road::diStation::SHIP)
+				{
+					string call_sign_ = (*stations)[i].call_sign();
+					//call_sign_.trim(true, true, " ");
+					//call_sign_.replace(" ", "_");
+					sprintf(buf, "%s|%s|%s|%f|%f|%s|%f|%f", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon(), (char *) road::diStation::SHIP.c_str(),0.,0.);
+				}
+				string line(buf);
+				for (j = 0; j < tmpresult.size(); j++)
+				{
+					line = line + "|" + tmpresult[j];
+				}
+				lines[(*stations)[i].stationID()] = line;
 
 		}
 	}
