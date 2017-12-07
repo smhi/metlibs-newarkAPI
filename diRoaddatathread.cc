@@ -821,29 +821,32 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 					{
 						line = line + "|" + from_number((*stations)[i].lat()) + "|" + from_number((*stations)[i].lon());
 					}
-          line = line + "|" + (*stations)[i].station_type() + "|" + from_number((*stations)[i].environmentid()) + "|" + from_number((*stations)[i].data());
-					for (j = 0; j < tmpresult.size(); j++)
-					{
-						line = line + "|" + tmpresult[j];
-					}
-					// here, we should add the result to cache
-					// Maybe, use map in maps ???
-					// Do not return empty lines if no data from station!
-					// write operations to common objekts
-					if (nTmpRows)
-					{
-						// We must protect these maps
-						boost::mutex::scoped_lock lock(_outMutex);
-						lines[(*stations)[i].stationID()] = line;
-						tmp_data[(*stations)[i].stationID()] = line;
-					}
-					else
-					{
-						// We must protect these maps
-						boost::mutex::scoped_lock lock(_outMutex);
-						lines[(*stations)[i].stationID()] = line;
+          // Skip emty data.
+          if ((*stations)[i].data()) {
+            line = line + "|" + (*stations)[i].station_type() + "|" + from_number((*stations)[i].environmentid()) + "|" + from_number((*stations)[i].data());
+            for (j = 0; j < tmpresult.size(); j++)
+            {
+              line = line + "|" + tmpresult[j];
+            }
+            // here, we should add the result to cache
+            // Maybe, use map in maps ???
+            // Do not return empty lines if no data from station!
+            // write operations to common objekts
+            if (nTmpRows)
+            {
+              // We must protect these maps
+              boost::mutex::scoped_lock lock(_outMutex);
+              lines[(*stations)[i].stationID()] = line;
+              tmp_data[(*stations)[i].stationID()] = line;
+            }
+            else
+            {
+              // We must protect these maps
+              boost::mutex::scoped_lock lock(_outMutex);
+              lines[(*stations)[i].stationID()] = line;
 
-					}
+            }
+          }
 				}
 				else
 				{
