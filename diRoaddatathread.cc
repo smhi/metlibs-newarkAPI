@@ -172,11 +172,11 @@ retry:
 			char query[10240];
 			if ((*stations)[i].station_type() == road::diStation::WMO)
 			{
-				sprintf(buf, "%d|%s|%s|%f|%f", (*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+				sprintf(buf, "%s|%d|%s|%s|%f|%f", (*stations)[i].name().c_str(),(*stations)[i].wmonr(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 			}
 			else if ((*stations)[i].station_type() == road::diStation::ICAO)
 			{
-				sprintf(buf, "%s|%s|%s|%f|%f", (*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
+				sprintf(buf, "%s|%s|%s|%s|%f|%f", (*stations)[i].name().c_str(),(*stations)[i].ICAOID().c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str(),  (*stations)[i].lat(), (*stations)[i].lon());
 			}
 			else if ((*stations)[i].station_type() == road::diStation::SHIP)
 			{
@@ -184,7 +184,7 @@ retry:
 				string call_sign_ = (*stations)[i].call_sign();
 				//call_sign_.trim(true, true, " ");
 				//call_sign_.replace(" ", "_");
-				sprintf(buf, "%s|%s|%s", call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str());
+				sprintf(buf, "%s|%s|%s|%s", call_sign_.c_str(), call_sign_.c_str(), (char *)obstime_.isoDate().c_str(), (char *)obstime_.isoClock(true,true).c_str());
 			}
 			string line(buf);
 
@@ -724,11 +724,14 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
                   std::vector<std::string> line_tokens = split(line, "|", true);
                   std::string tmp_line;
                   for (size_t i = 0; i < line_tokens.size(); i++) {
+                    // StationName and Name
                     if (i == 0) {
                       tmp_line = line_tokens[i];
                     } else if (i == 1) {
-                      tmp_line = tmp_line + "|" + refTime_.isoDate();
+                      tmp_line = tmp_line + "|" + line_tokens[i];;
                     } else if (i == 2) {
+                      tmp_line = tmp_line + "|" + refTime_.isoDate();
+                    } else if (i == 3) {
                       tmp_line = tmp_line + "|" + refTime_.isoClock(true,true);
                     } else {
                       tmp_line = tmp_line + "|" + line_tokens[i];
