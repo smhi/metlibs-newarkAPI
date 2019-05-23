@@ -378,7 +378,7 @@ retry:
 							delete theConn;
 							theConn = NULL;
 							stop = true;
-							break;
+							return;
 
 						}
 						catch (...)
@@ -393,7 +393,7 @@ retry:
 							delete theConn;
 							theConn = NULL;
 							stop = true;
-							break;
+							return;
 						}
 
 					}
@@ -785,7 +785,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 						delete theConn;
 						theConn = NULL;
 						stop = true;
-						break;
+						return;
 					}
 					catch (...)
 					{
@@ -798,9 +798,8 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 						theConn->disconnect();
 						delete theConn;
 						theConn = NULL;
-
 						stop = true;
-						break;
+						return;
 					}
 					ftime(&tend);
 					//fprintf(stderr, "populate took %6.4f  CPU seconds, %d rows retrieved\n",((double)(end-start)/CLOCKS_PER_SEC), nTmpRows);
