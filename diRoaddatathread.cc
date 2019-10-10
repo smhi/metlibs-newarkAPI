@@ -51,6 +51,7 @@ using namespace road;
 
 //#define DEBUGSQL 1
 //#define DEBUGROW 1
+//#define DEBUGPRINT 1
 
 boost::mutex RoadDataThread::_outMutex;
 // Default constructor protected
@@ -409,20 +410,31 @@ retry:
 						//select * from kvalobs_wmo_observation_view where position_id=747 and parameter_id in(4,3);
 						if ((*stations)[i].station_type() == road::diStation::WMO)
 						{
+							miTime refTime = obstime_;
+							miClock refClock = refTime.clock();
+							miDate refDate = refTime.date();
+							
+							if (refClock.min() != 0)
+							{
+								refClock.setClock(refClock.hour(),0,0);
+								refTime.setTime(refDate, refClock);
+								refTime.addHour(+1);
+							}
 							if (strlen(observation_master_ids))
 							{
 								sprintf(query,
 									"SELECT * FROM(SELECT wmo.wmo_block_number AS wmo_block, wmo.wmo_station_number AS wmo_number, wmo.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon,ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, ctx.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
-FROM wmo_station_identity_view wmo join stationary_observation_value_context_view ctx on wmo.position_id = ctx.position_id join stationary_observation_place_view pos on wmo.position_id = pos.position_id  join stationary_observation_value_approved_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between wmo.validtime_from and wmo.validtime_to and val.real_time_store=true join statistics_formula_view f on f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_wmo_observation_wiew WHERE observation_master_id in (%s) and reference_time='%s';" 
-,observation_master_ids, (char *)obstime_.isoTime(true,true).c_str());
+FROM wmo_station_identity_view wmo join stationary_observation_value_context_view ctx on wmo.position_id = ctx.position_id join stationary_observation_place_view pos on wmo.position_id = pos.position_id  join stationary_observation_value_approved_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between wmo.validtime_from and wmo.validtime_to and val.real_time_store=true join statistics_formula_view f on f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_wmo_observation_wiew WHERE observation_master_id in (%s) and valid_to='%s' and reference_time='%s';" 
+,observation_master_ids, (char *)obstime_.isoTime(true,true).c_str(),(char *)refTime.isoTime(true,true).c_str());
 							}
 							else
 							{
 								sprintf(query,
-									"SELECT * FROM (SELECT *, min(offset_from_time_tick_seconds) over (partition by observation_master_id, time_tick) min_offset_from_time_tick_seconds FROM ( SELECT wmo.wmo_block_number AS wmo_block, wmo.wmo_station_number AS wmo_number, wmo.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, ctx.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
-FROM wmo_station_identity_view wmo join stationary_observation_value_context_view ctx on wmo.position_id = ctx.position_id join stationary_observation_place_view pos on wmo.position_id = pos.position_id join stationary_observation_value_approved_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between wmo.validtime_from and wmo.validtime_to and val.real_time_store=true join statistics_formula_view f on f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_wmo_observation_wiew WHERE position_id in(%s) and parameter_id in(%s) and reference_time='%s') as agg WHERE   min_offset_from_time_tick_seconds = offset_from_time_tick_seconds;",
-(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str());
+									"SELECT * FROM(SELECT wmo.wmo_block_number AS wmo_block, wmo.wmo_station_number AS wmo_number, wmo.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon,ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, ctx.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
+FROM wmo_station_identity_view wmo join stationary_observation_value_context_view ctx on wmo.position_id = ctx.position_id join stationary_observation_place_view pos on wmo.position_id = pos.position_id  join stationary_observation_value_approved_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between wmo.validtime_from and wmo.validtime_to and val.real_time_store=true join statistics_formula_view f on f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_wmo_observation_wiew WHERE position_id in(%s) and parameter_id in(%s) and valid_to='%s' and reference_time='%s';" 
+,(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str(),(char *)refTime.isoTime(true,true).c_str());
 							}
+							
 						}
 						else if ((*stations)[i].station_type() == road::diStation::ICAO)
 						{
@@ -446,7 +458,7 @@ FROM icao_station_identity_view icao join stationary_observation_value_context_v
 							{
 								sprintf(query,
 									"SELECT * FROM ( SELECT  icao.icao_code AS icao_code, icao.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
-FROM icao_station_identity_view icao join stationary_observation_value_context_view ctx on icao.position_id = ctx.position_id join stationary_observation_place_view pos on icao.position_id = pos.position_id join stationary_observation_value_approved_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between icao.validtime_from and icao.validtime_to and val.real_time_store=true join statistics_formula_view f on  f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_icao_observation_wiew where position_id in(%s) and parameter_id in(%s) and valid_to='%s'and reference_time='%s';",
+FROM icao_station_identity_view icao join stationary_observation_value_context_view ctx on icao.position_id = ctx.position_id join stationary_observation_place_view pos on icao.position_id = pos.position_id join stationary_observation_value_approved_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between icao.validtime_from and icao.validtime_to and val.real_time_store=true join statistics_formula_view f on  f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_icao_observation_wiew where position_id in(%s) and parameter_id in(%s) and valid_to='%s' and reference_time='%s';",
 									(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str(),(char *)refTime.isoTime(true,true).c_str());
 							}
 						}
@@ -707,19 +719,19 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
                   miTime refTime_;
                   int sec = 0;
                   if ((*stations)[i].station_type() == road::diStation::WMO) {
-                    refTime_.setTime(crow.reftime);
-                    row[ s_offset_from_time_tick_seconds ].to(sec);
-                    refTime_.addSec(-sec);
+                    refTime_.setTime(crow.validtimeto);
+                    //row[ s_offset_from_time_tick_seconds ].to(sec);
+                    //refTime_.addSec(-sec);
                   }
                   else if ((*stations)[i].station_type() == road::diStation::ICAO) {
-                    refTime_.setTime(crow.reftime);
-                    row[ s_offset_from_time_tick_seconds -1].to(sec);
-                    refTime_.addSec(-sec);
+                    refTime_.setTime(crow.validtimeto);
+                    //row[ s_offset_from_time_tick_seconds -1].to(sec);
+                    //refTime_.addSec(-sec);
                   }
                   else if ((*stations)[i].station_type() == road::diStation::SHIP) {
-                    refTime_.setTime(crow.reftime);
-                    row[ s_offset_from_time_tick_seconds ].to(sec);
-                    refTime_.addSec(-sec);
+                    refTime_.setTime(crow.validtimeto);
+                    //row[ s_offset_from_time_tick_seconds ].to(sec);
+                    //refTime_.addSec(-sec);
                   }
                   std::vector<std::string> line_tokens = split(line, "|", true);
                   std::string tmp_line;
