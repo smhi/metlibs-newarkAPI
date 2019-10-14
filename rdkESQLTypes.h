@@ -44,7 +44,7 @@ typedef int bool;
 #define _AREA_REF_STR_SIZE 82
 #endif
 #ifndef _UNIT_STR_SIZE
-#define _UNIT_STR_SIZE 32
+#define _UNIT_STR_SIZE 64
 #endif
 #ifndef _STATISTICSTYPE_STR_SIZE
 #define _STATISTICSTYPE_STR_SIZE 17

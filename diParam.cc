@@ -272,6 +272,7 @@ map<string,string> road::diParam::init_unit_map()
   tmpMap["knot"] = "knot";
   tmpMap["proportion"] = "%";
   tmpMap["kilogram per square metre"] = "mm";
+  tmpMap["kilogram per square metre second"] = "mm/s";
   tmpMap["percent"] = "%";
   tmpMap["degree true"] = "degree";
   tmpMap["pascal"] = "hPa";
@@ -433,6 +434,13 @@ void road::diParam::convertValue(RDKCOMBINEDROW_2 & row)
 		row.floatvalue = row.floatvalue/100.0;
 	  else
 		row.integervalue = row.integervalue/100;
+  }
+  else if (toDianaUnit(row.unit) == "mm/s")
+  {
+	  if (row.integervalue_is_null)
+		row.floatvalue = row.floatvalue*3600.0;
+	  else
+		row.integervalue = row.integervalue*3600;
   }
 }
 
