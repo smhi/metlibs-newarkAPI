@@ -413,7 +413,6 @@ retry:
 							miTime refTime = obstime_;
 							miClock refClock = refTime.clock();
 							miDate refDate = refTime.date();
-							
 							if (refClock.min() != 0)
 							{
 								refClock.setClock(refClock.hour(),0,0);
@@ -429,10 +428,17 @@ FROM wmo_station_identity_view wmo join stationary_observation_value_context_vie
 							}
 							else
 							{
+							
+								sprintf(query,
+									"SELECT * FROM (SELECT wmo.wmo_block_number AS wmo_block, wmo.wmo_station_number AS wmo_number, wmo.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, min(val.offset_from_time_tick) AS valid_offset, val.time_tick - val.offset_from_time_tick AS valid_to, ctx.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number FROM wmo_station_identity_view wmo join stationary_observation_value_context_view ctx on wmo.position_id = ctx.position_id join stationary_observation_place_view pos on wmo.position_id = pos.position_id join stationary_observation_value_approved_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between wmo.validtime_from and wmo.validtime_to and val.real_time_store=true join statistics_formula_view f on f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id GROUP BY wmo.wmo_block_number, wmo.wmo_station_number, wmo.position_id, pos.stationary_position,ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name, f.statistics_formula_name, val.observation_value,par.parameter_unit, val.quality, val.station_operating_mode,  val.time_tick, val.offset_from_time_tick, ctx.observation_sampling_time, ctx.observation_master_id, val.value_version_number) AS diana_wmo_observation_wiew WHERE position_id in(%s) and parameter_id in(%s) and valid_to + valid_offset ='%s'  and  reference_time='%s';",
+									(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str(),(char *)refTime.isoTime(true,true).c_str());
+
+								/*	
 								sprintf(query,
 									"SELECT * FROM(SELECT wmo.wmo_block_number AS wmo_block, wmo.wmo_station_number AS wmo_number, wmo.position_id, round(st_y(pos.stationary_position)::numeric, 2) AS lat, round(st_x(pos.stationary_position)::numeric, 2) AS lon,ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, ctx.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
 FROM wmo_station_identity_view wmo join stationary_observation_value_context_view ctx on wmo.position_id = ctx.position_id join stationary_observation_place_view pos on wmo.position_id = pos.position_id  join stationary_observation_value_approved_view val on val.observation_master_id = ctx.observation_master_id and val.time_tick between wmo.validtime_from and wmo.validtime_to and val.real_time_store=true join statistics_formula_view f on f.statistics_formula_id = ctx.statistics_formula_id join parameter_view par on par.parameter_id = ctx.parameter_id join level_combination_view lc on lc.level_combination_id = ctx.level_combination_id join level_parameter_view lp on lp.level_parameter_id = lc.level_parameter_id) AS diana_wmo_observation_wiew WHERE position_id in(%s) and parameter_id in(%s) and valid_to='%s' and reference_time='%s';" 
-,(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str(),(char *)refTime.isoTime(true,true).c_str());
+,(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)obstime_.isoTime(true,true).c_str(),(char *)refTime.isoTime(true,true).c_str()); 
+*/
 							}
 							
 						}
@@ -578,13 +584,13 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 									row[ level_from ].to(crow.altitudefrom);
 									row[ level_to ].to(crow.altitudeto);
 									strcpy(crow.validtimefrom,row[ valid_from ].c_str());
-									strcpy(crow.validtimeto,row[ valid_to ].c_str());
+									strcpy(crow.validtimeto,row[ valid_to + 1 ].c_str());
 									strcpy(crow.reftime,row[ reference_time ].c_str());
 									// We must add 1000 to this
 									row[ level_parameter_id ].to(crow.srid);
 									crow.srid=crow.srid + 1000;
 									// Note, the quality are not equal....
-                  strcpy(crow.quality,row[ quality ].c_str());
+									strcpy(crow.quality,row[ quality ].c_str());
 									// The parameter are the same
 									row[ parameter_id ].to(crow.parameter);
 									// No longer needed, set to 0
@@ -594,9 +600,17 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 									strcpy(crow.unit,row[ unit ].c_str()); 
 									// The stortime, set it to reference time
 									strcpy(crow.storetime,row[ reference_time ].c_str());
-									row[ value_version_number ].to(crow.dataversion);
+									row[ value_version_number + 1 ].to(crow.dataversion);
 									row[ automation_code ].to(crow.automationcode);
 									strcpy(crow.statisticstype, row[ statistics_type ].c_str());
+									/*
+									const int valid_to= 17;
+									const int observation_master_id= 18;
+									const int time_tick= 19;
+									const int observation_sampling_time= 20;
+									const int offset_from_time_tick= 21;
+									const int value_version_number= 22;
+									*/
 								}
 								else if ((*stations)[i].station_type() == road::diStation::ICAO)
 								{

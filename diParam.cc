@@ -43,7 +43,7 @@
 #include "rdkESQLTypes.h"
 #include <float.h>
 
-//#define DEBUGPRINT 1
+#define DEBUGPRINT 1
 /*
  * Created by DNMI/IT: borge.moe@met.no
  * at Tue Aug 28 15:23:16 2002 
@@ -70,6 +70,7 @@ int road::diParam::initParameters(const string &headerfile)
 	if (its == road::diParam::params_map.end())
 	{
 		char pbuf[255];
+		string pbufstr;
 		ifstream pifs(headerfile.c_str(),ios::in);
 		if (pifs.is_open())
 		{ 
@@ -80,44 +81,48 @@ int road::diParam::initParameters(const string &headerfile)
 			while (pifs.good())
 			{
 				pifs.getline(pbuf,254);
+				// remove '\r\n' !
+				pbufstr=string(pbuf);
+				size_t pos = pbufstr.find("\n");
+				if (pos != std::string::npos)
+					pbufstr.erase(pos,1);
+				pos = pbufstr.find("\r");
+				if (pos != std::string::npos)
+					pbufstr.erase(pos,1);
 				if (j == 0 || j == 1)
 				{
 					// Skip the header line 0
-					if (j == 1)
-			  {
-				  string comment(pbuf);
-				  //comment.trim("#");
-				  vector<string> names=split(comment, "\t",false);
-				  vector<string>::iterator it=names.begin();
-				  int i = 0;
-				  diParam::index_column_map.clear();
-				  for(;it!=names.end(); it++){
-					  //cerr << i << ", " << *it << endl;
-					  diParam::index_column_map[i] = *it; 
-					  i++;
-				  }
+				  if (j == 1)
+				  {
+					  vector<string> names=split(pbufstr, "|",false);
+					  vector<string>::iterator it=names.begin();
+					  int i = 0;
+					  diParam::index_column_map.clear();
+					  for(;it!=names.end(); it++){
+						  diParam::index_column_map[i] = *it; 
+						  i++;
+					  }
 
-			  }
+				  }
 				}
 				else 
 				{
-					string par(pbuf);
 					// check if line is empty
-					string tmp = par;
-					trim(tmp,"\t");
-					if (tmp.size() > 0)
-					{
-						//cerr << par << endl;
-						diParam param(par);
+					string par(pbufstr);
+					std::size_t found = par.find("|");
+					if (found==std::string::npos) {
+						j++;
+						continue;
+					}
+					diParam param(par);
 #ifdef DEBUGPRINT
-						cerr << param.toSend() << endl;
+					cerr << param.toSend() << endl;
 #endif
-						// if not correct, just skip it
-						if (param.isCorrect)
-						{
-							roadparams->insert(param.parameter());
-							params->push_back(param);
-						}
+					// if not correct, just skip it
+					if (param.isCorrect)
+					{
+						roadparams->insert(param.parameter());
+						params->push_back(param);
 					}
 				}
 				j++;
@@ -135,49 +140,51 @@ int road::diParam::initParameters(const string &headerfile)
 bool 
 road::diParam::setParams(const string &line)
 {
-  // TDB
-  //Parameter	Group	Kod (kvalobs)	Kvalobsnummer	Enhet	Bestyckning	ROAD param observation	ROAD param modell
-  //Temperatur, nuvärde	Temp	TA	211	C	T	[ 4 / 6 2.0 ]	[ 4 / 6 2.0 ]
-  // there may bee empty lines just containing '\t'
-  // possible name are #name	#group	#code	#id	#unit		#roadobs	#roadmodel
+//Parameter|Group|Kod synop|Enhet|ROAD param observation
+//#name|#group|#code|#unit|#roadobs
+//Temperatur, nuvärde|Temp|TTT|C|[ 4 / 6 -32767.0 32767.0 / inst * * 0 ]
   string       buf;
-  vector<string> names=split(line,"\t",false);
-  
-  vector<string>::iterator it=names.begin();
-  
-  int i = 0;
-  for(;it!=names.end(); it++){
-    
-    try{
+  vector<string> names=split(line,"|",false);
+  if (names.size() == index_column_map.size())
+  {
+	for (size_t i = 0; i < names.size(); i++) {
+		
 		string name = index_column_map[i];
+	
 		if (name == "#name")
 		{
-			description_ = *it;
+			description_ = names[i];
 		}
 		else if (name == "#group")
 		{
-			comment_ = *it;
+			comment_ = names[i];
 		}
 		else if (name == "#code")
 		{
-			diananame_ = *it;
+			diananame_ = names[i];
 		}
 		else if (name == "#unit")
 		{
-			unit_ = *it;
+			unit_ = names[i];
 		}
 		else if (name == "#roadobs")
 		{
+			buf = names[i];
 			// pase the ROAD param observation
 	  // [ 13 / 6 10.0 / avg -10m 0 ]
-	  buf = *it;
-	  trim( buf, true, false, "[");
-	  trim( buf, false, true, "]");
+
+	  size_t pos = buf.find("[");
+	  if (pos != std::string::npos)
+		buf.erase(pos,1);
+	  pos = buf.find("]");
+	  if (pos != std::string::npos)
+		buf.erase(pos,1);
+	  //trim( buf, true, true, "[]");
 	  string tmpbuf;
 	  vector<string> items=split(buf,"/");
 	  // preprocessing
 	  if (items.size() == 2)
-	    items.push_back(string("None 0 0"));
+	    items.push_back(string("None * * *"));
 	  if (items.size() != 3)
 	    {
 	      cerr << "wrong number of groups" << endl;
@@ -213,25 +220,38 @@ road::diParam::setParams(const string &line)
 	  trim(level[2]);
 	  altitudeto_ = to_double(level[2]);
 	  // prepreocee item 2
-	  //cerr << items[2] << endl;
 	  vector<string> stats=split(items[2]);
-	  
-	  statisticstype_ = fixstat(stats[0]);
-	  validtimefromdelta_ = fixage(stats[1]);
-	  validtimetodelta_ = fixage(stats[2]);
+	  if (stats.size() == 1)
+	  {
+		statisticstype_ = fixstat(stats[0]);
+		validtimefromdelta_ = LONG_MAX;
+		validtimetodelta_ = LONG_MAX;
+		observation_sampling_time_ = LONG_MAX;
+	  } else if (stats.size() == 2) {
+	    statisticstype_ = fixstat(stats[0]);
+	    validtimefromdelta_ = fixage(stats[1]);
+	    validtimetodelta_ = LONG_MAX;
+	    observation_sampling_time_ = LONG_MAX;
+	  } else if (stats.size() == 3) {
+		statisticstype_ = fixstat(stats[0]);
+		validtimefromdelta_ = fixage(stats[1]);
+		validtimetodelta_ = fixage(stats[2]);
+		observation_sampling_time_ = LONG_MAX;
+	  } else if (stats.size() == 4) {
+	    statisticstype_ = fixstat(stats[0]);
+		validtimefromdelta_ = fixage(stats[1]);
+		validtimetodelta_ = fixage(stats[2]);
+		observation_sampling_time_ = fixage(stats[3]);
+	  }
 	  dataversion_ = 0;
-		}
-      
-    }
-    catch(...){
-      cerr << "diParameter: exception ..... \n";
-	  return false;
-    }
-    i++;
+	}
+	
+	}
+	return true;
   }
-
-  return true;
+  return false;
 }
+
 
 map<string,string> road::diParam::init_stat_type()
 {
@@ -328,6 +348,8 @@ road::diParam::setParams(const string &diananame,
 	  const long & validtimefromdelta,
 	  /* offset from reftime to validtimeto, mostly 0 */
 	  const long & validtimetodelta,
+	  /* observation sampling time */
+	  const long & observation_sampling_time,
 	  /* unit in road */
 	  const string &unit,
 	  /* dataversion, always 0 with the exception of EPS */
@@ -345,6 +367,7 @@ road::diParam::setParams(const string &diananame,
   srid_ = srid;
   validtimefromdelta_ = validtimefromdelta;
   validtimetodelta_ = validtimetodelta;
+  observation_sampling_time_ = observation_sampling_time;
   unit_ = unit;
   dataversion_ = dataversion;
   statisticstype_ = statisticstype;
@@ -367,16 +390,17 @@ bool road::diParam::isMapped(const RDKCOMBINEDROW_2 & row)
   if (string(row.statisticstype) != statisticstype_) return false;
   
   // and now the times
-  if ((validtimefromdelta_ == LONG_MAX)&&(validtimetodelta_ == LONG_MAX)) return true;
+  if ((validtimefromdelta_ == LONG_MAX)&&(validtimetodelta_ == LONG_MAX)&&(observation_sampling_time_ == LONG_MAX)) return true;
   
   miTime tmpreftime = miTime(row.reftime);
   // the deltas are negative for observations
   // NOTE! If the observation is older for some parameters than 10 minutes, the validtimefrom and validtimeto must
   // be set with the absolute time, for example 13.19.
   // We have to deal with this too....
-  long validtimefromdelta = miTime::secDiff(miTime(row.validtimefrom),tmpreftime);
-  long validtimetodelta = miTime::secDiff(miTime(row.validtimeto),tmpreftime);
-  long duration = validtimetodelta - validtimefromdelta;
+  long validtimefromdelta = miTime::secDiff(tmpreftime, miTime(row.validtimefrom));
+  long validtimetodelta = miTime::secDiff(tmpreftime, miTime(row.validtimeto));
+  // This is incorrect!!!
+  long duration = miTime::secDiff(miTime(row.validtimeto), miTime(row.validtimefrom));
   long duration_ = validtimetodelta_ - validtimefromdelta_;
   
 #ifdef DEBUGPRINT
@@ -384,9 +408,16 @@ bool road::diParam::isMapped(const RDKCOMBINEDROW_2 & row)
   cerr << "diParam.validtimetodelta_: " << validtimetodelta_ << endl;
   cerr << "validtimefromdelta: " << validtimefromdelta << endl;
   cerr << "diParam.validtimefromdelta_: " << validtimefromdelta_ << endl;
+  cerr << "diParam.observation_sampling_time_: " << observation_sampling_time_ << endl;
   cerr << "duration: " << duration << endl;
   cerr << "duration_: " << duration_ << endl;
 #endif
+
+  if ((validtimefromdelta_ == LONG_MAX)&&(validtimetodelta_ == LONG_MAX)&&(observation_sampling_time_ != LONG_MAX))
+  {
+	if (duration != observation_sampling_time_) return false;
+	return true;
+  }
 
   // We must support a delta from reference time
   if ((validtimefromdelta_ != LONG_MAX)&&(validtimetodelta_ != LONG_MAX))
@@ -496,6 +527,7 @@ road::diParam::toSend() const
       << srid_  << ","
       << validtimefromdelta_  << ","
       << validtimetodelta_  << ","
+	  << observation_sampling_time_  << ","
       << unit_  << ","
       << dataversion_  << ","
       << statisticstype_  << ")";

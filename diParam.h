@@ -71,6 +71,8 @@ private:
   long validtimefromdelta_;
   /* offset from reftime to validtimeto, mostly 0 */
   long validtimetodelta_;
+  /* sampling time */
+  long observation_sampling_time_;
   /* unit in road */
   string unit_;
   /* dataversion, always 0 with the exception of EPS */
@@ -113,6 +115,8 @@ private:
 	  const long & validtimefromdelta,
 	  /* offset from reftime to validtimeto, mostly 0 */
 	  const long & validtimetodelta,
+	  /* sampling time */
+	  const long & observation_sampling_time,
 	  /* unit in road */
 	  const string &unit,
 	  /* dataversion, always 0 with the exception of EPS */
@@ -130,6 +134,7 @@ private:
 	    srid,
 	    validtimefromdelta,
 	    validtimetodelta,
+		observation_sampling_time,
 	    unit,
 	    dataversion,
 	    statisticstype
@@ -149,6 +154,8 @@ private:
 	  const long & validtimefromdelta,
 	  /* offset from reftime to validtimeto, mostly 0 */
 	  const long & validtimetodelta,
+	  /* sampling time */
+	  const long & observation_sampling_time,
 	  /* unit in road */
 	  const string &unit,
 	  /* dataversion, always 0 with the exception of EPS */
