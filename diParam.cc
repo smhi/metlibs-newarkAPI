@@ -43,7 +43,7 @@
 #include "rdkESQLTypes.h"
 #include <float.h>
 
-#define DEBUGPRINT 1
+//#define DEBUGPRINT 1
 /*
  * Created by DNMI/IT: borge.moe@met.no
  * at Tue Aug 28 15:23:16 2002 
