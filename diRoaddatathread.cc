@@ -35,6 +35,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <time.h>
 #include <sys/timeb.h>
 #include <pqxx/pqxx>
+#include <pqxx/row>
 //#include <pgconpool/dbConnectionPool.h>
 //#include <pgconpool/dbConnection.h>
 #include <diStation.h>
@@ -306,7 +307,7 @@ retry:
 #ifdef WIN32
 									boost::mutex::scoped_lock lock(_outMutex);
 #endif
-									pqxx::tuple row = res.at(m);
+									pqxx::row row = res.at(m);
 #ifdef DEBUGPRINT
 									if ((*stations)[i].station_type() == road::diStation::WMO)
 									{
@@ -523,7 +524,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 #ifdef WIN32
 								boost::mutex::scoped_lock lock(_outMutex);
 #endif
-								pqxx::tuple row = res.at(m);
+								pqxx::row row = res.at(m);
 
 #ifdef DEBUGPRINT
 								if ((*stations)[i].station_type() == road::diStation::WMO)

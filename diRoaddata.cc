@@ -11,6 +11,7 @@
 #include <time.h>
 #include <sys/timeb.h>
 #include <pqxx/pqxx>
+#include <pqxx/row>
 //#include <pgconpool/dbConnectionPool.h>
 //#include <pgconpool/dbConnection.h>
 #include "diParam.h"
@@ -229,7 +230,7 @@ retry:
 			{
 				for (int j = 0; j < nTmpRows; j++)
 				{
-					pqxx::tuple row = res.at(j);
+					pqxx::row row = res.at(j);
 #ifdef DEBUGPRINT
 					// Note, all columns are not used...
 					cout << row["wmo_block"].c_str() << ": " << row["wmo_number"].c_str() << ": " << row["station_name"].c_str()
@@ -274,7 +275,7 @@ retry:
 			{
 				for (int j = 0; j < nTmpRows; j++)
 				{
-					pqxx::tuple row = res.at(j);
+					pqxx::row row = res.at(j);
 #ifdef DEBUGPRINT
 					// Note, all columns are not used...
 					cout << row["icao_code"].c_str() << ": " << row["station_name"].c_str()
@@ -313,7 +314,7 @@ retry:
 			{
 				for (int j = 0; j < nTmpRows; j++)
 				{
-					pqxx::tuple row = res.at(j);
+					pqxx::row row = res.at(j);
 #ifdef DEBUGPRINT
 					// Note, all columns are not used...
 					cout << row["ship_id"].c_str() << ": " << row["sender_id"].c_str() << ": " << row["sender_type"].c_str() << endl;
@@ -970,7 +971,7 @@ WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.i
 							// OBS! Multiple place id for one station
 							for (int j = 0; j < res.size(); j++)
 							{
-								pqxx::tuple row = res.at(j);
+								pqxx::row row = res.at(j);
 								cout << row["wmo_block"].c_str() << ": " << row["wmo_number"].c_str() << ": " << row["station_name"].c_str()
 									<< ": " << row["lat"].c_str()<< ": " << row["lon"].c_str()<< ": " << row["position_id"].c_str()
 									<< ": " << row["validtime_from"].c_str()<< ": " << row["validtime_to"].c_str()<< ": " << row["height_above_mean_sea_level"].c_str()<< endl;
@@ -1067,7 +1068,7 @@ AS diana_aerosond_observation_wiew where position_id in (%s) and parameter_id in
 						(*stations)[i].setData(true);
 						for (int j = 0; j < nTmpRows; j++)
 						{
-							pqxx::tuple row = res.at(j);
+							pqxx::row row = res.at(j);
 
 #ifdef DEBUGPRINT
 								cout << row[ wmo_block ].c_str() << ": " << row[ wmo_number ].c_str() << ": " << row[ position_id ].c_str()
