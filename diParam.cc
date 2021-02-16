@@ -473,6 +473,14 @@ void road::diParam::convertValue(RDKCOMBINEDROW_2 & row)
 	  else
 		row.integervalue = row.integervalue*3600;
   }
+  // Special case for snow depth (sss)
+  else if ((toDianaUnit(row.unit) == "m")&&(diananame_ == "sss"))
+  {
+	  if (row.integervalue_is_null)
+		row.floatvalue = row.floatvalue*100.0;
+	  else
+		row.integervalue = row.integervalue*100;
+  }
 }
 
 string road::diParam::toDianaUnit( const string & roadunit)
