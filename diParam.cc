@@ -63,6 +63,8 @@ map<string, set<int> * > road::diParam::roadparams_map;
 
 int road::diParam::initParameters(const string &headerfile)
 {
+	stat_type = init_stat_type();
+	unit_map = init_unit_map();
 	// init iterator
 	map<string, vector<diParam> * >::iterator its = road::diParam::params_map.begin();
 	// search
@@ -272,18 +274,6 @@ map<string,string> road::diParam::init_stat_type()
 map<string,string> road::diParam::init_unit_map()
 {
   map<string,string> tmpMap;
-  /*
-  UNIT_MAPPER = {('kelvin','C'):'temp',
-              ('metre', 'm'):'null',
-              ('metre per second', 'm/s'):'null',
-              ('proportion','%'):'percent',
-              ('kilogram per square metre', 'mm'):'precip',
-              ('percent','%'):'null',
-              ('degree true','degree'):'null',
-              ('pascal','hPa'):'tohpa',
-              ('metre per second','degree'):'null',
-              ('code','code'):'null'}
-  */
   tmpMap["kelvin"] = "C";
   // To fix a bug in mora
   tmpMap["degree celsius"] = "C";
@@ -386,9 +376,8 @@ bool road::diParam::isMapped(const RDKCOMBINEDROW_2 & row)
   if (srid_ != 15) // the widcard
 	  if (row.srid != srid_) return false;
   if (toDianaUnit(row.unit) != unit_) return false;
-  //if (row.dataversion != dataversion_) return false;
   if (string(row.statisticstype) != statisticstype_) return false;
-  
+    
   // and now the times
   if ((validtimefromdelta_ == LONG_MAX)&&(validtimetodelta_ == LONG_MAX)&&(observation_sampling_time_ == LONG_MAX)) return true;
   
@@ -485,38 +474,6 @@ void road::diParam::convertValue(RDKCOMBINEDROW_2 & row)
 
 string road::diParam::toDianaUnit( const string & roadunit)
 {
-  /*
-  # (road_unit,kvalobs_unit) key to mapper
-# the code to code mapping maybe must have a complex mapper
-UNIT_MAPPER = {('kelvin','C'):'temp',
-              ('metre', 'm'):'null',
-              ('metre per second', 'm/s'):'null',
-              ('proportion','%'):'percent',
-              ('kilogram per square metre', 'mm'):'precip',
-              ('percent','%'):'null',
-              ('degree true','degree'):'null',
-              ('pascal','hPa'):'tohpa',
-              ('metre per second','degree'):'null',
-              ('code','code'):'null'}
-
-# this converts from the ROAD to KVALOBS domain for precipitation
-def preciptokvalobs(x):
-    if (x <= 0.0):
-        if (x < 0.0):
-            x = 0.0
-        else:
-            x = -1.0
-    return x
-
-
-MAPPER = dict(
-    null=lambda x: x,
-    temp=lambda x: x - 273.15,
-    percent=lambda x: x*100.0,
-    precip=preciptokvalobs,
-    tohpa=lambda x: x/100.0
-    )
-  */
   return unit_map[roadunit];
 }
 

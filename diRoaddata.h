@@ -80,6 +80,7 @@ private:
 	
 public:
     static bool initDone;
+	static bool read_old_radiosonde_tables_;
 	static int initRoaddata(const string &databasefile);
 	// getStationList must be called after initRoaddata has been done, if not, there will be no connect information.
 	// Maybe this should be fixed in the future ?
@@ -104,7 +105,8 @@ public:
     ~Roaddata();
 	int open();
 	int getData(const vector<int> & index_stations_to_plot, map<int, string> & lines);
-	int getData(const vector<diStation> & stations_to_plot, map<int, vector<RDKCOMBINEDROW_2 > > & raw_data_map);
+	//int getData(const vector<diStation> & stations_to_plot, map<int, vector<RDKCOMBINEDROW_2 > > & raw_data_map);
+	int getRadiosondeData(const vector<diStation> & stations_to_plot, map<int, vector<RDKCOMBINEDROW_2 > > & raw_data_map);
 	int initData(const vector<string> & parameternames, map<int, string> & lines);
 	int close();
 };

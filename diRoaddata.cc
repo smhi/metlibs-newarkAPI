@@ -36,6 +36,8 @@ string road::Roaddata::user = "";
 string road::Roaddata::passwd = "";
 std::string road::Roaddata::connect_str = "";
 bool road::Roaddata::initDone = false;
+// To provide backward compatibility
+bool road::Roaddata::read_old_radiosonde_tables_ = false;
 map<std::string, map<miTime, map<int, string > > > road::Roaddata::road_data_cache;
 map<miTime, map<int, string > > road::Roaddata::road_cache;
 map<std::string, map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > > road::Roaddata::road_data_multi_cache;
@@ -45,27 +47,6 @@ map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > road::Roaddata::road_multi_ca
 //#define DEBUGSQL 1
 #define THREAD_POOL_SIZE 10
 
-
-// A working SQL statement for SHIP
-
-//SELECT * FROM
-//(SELECT ship.ship_id AS ship_id, ship.sender_id AS sender_id, pos.mobile_position_id, round(st_y(pos.mobile_position)::numeric, 2) AS lat, round(st_x(pos.mobile_position)::numeric, 2) AS lon, ctx.parameter_id, lc.level_parameter_id, lc.level_from, lc.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS unit, val.nordklim_quality_id, val.nordklim_action_id, val.nordklim_method_id, val.nordklim_status_id, val.nordklim_qc_level_id, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number
-//FROM ship_view ship, mobile_position_view pos, ship_observation_value_view val, ship_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_parameter_view lp, level_combination_view lc
-//WHERE ship.sender_id = ctx.sender_id AND val.mobile_position_id = pos.mobile_position_id AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND ctx.level_combination_id = lc.level_combination_id AND lc.level_parameter_id = lp.level_parameter_id)
-//AS diana_ship_observation_wiew where sender_id in (4185,
-//4186,
-//4187,
-//4188,
-//4189,
-//4190,
-//4191,
-//4192,
-//4193,
-//4194,
-//4195,
-//4196
-//) and parameter_id in(1,2,3,4,5,6,7,8,9,10) and reference_time >= '2011-08-18 00:00:00' and reference_time <= '2011-08-19 00:00:00';
-
 int road::Roaddata::initRoaddata(const string &databasefile)
 {
 #ifdef DEBUGPRINT
@@ -74,6 +55,12 @@ int road::Roaddata::initRoaddata(const string &databasefile)
 	
 	if (initDone)
 		return 1;
+	// get the backward compatibility flag
+	char* read_old_radiosonde_tables = getenv("READ_OLD_RADIOSONDE_TABLES");
+	if (read_old_radiosonde_tables != 0)
+	{
+		read_old_radiosonde_tables_ = (bool)atoi(read_old_radiosonde_tables);
+	}
     ifstream ifs(databasefile.c_str(),ios::in);
 	vector<string> token;
     char buf[255];
@@ -775,7 +762,7 @@ int road::Roaddata::getData(const vector<int> & index_stations_to_plot, map<int,
 	return 0;
 }
 
-int road::Roaddata::getData(const vector<diStation> & stations_to_plot, map<int, vector<RDKCOMBINEDROW_2 > > & raw_data_map)
+int road::Roaddata::getRadiosondeData(const vector<diStation> & stations_to_plot, map<int, vector<RDKCOMBINEDROW_2 > > & raw_data_map)
 {
 #ifdef DEBUGPRINT
 	cerr << "++ Roaddata::getData() ++" << endl;
@@ -958,7 +945,7 @@ retry:
 						sprintf(query, "SELECT * FROM \
 (SELECT ai.wmo_block_number AS wmo_block, ai.wmo_station_number AS wmo_number, ai.wmo_station_name AS station_name, round(st_y(sop.stationary_position)::numeric, 2) AS lat, round(st_x(sop.stationary_position)::numeric, 2) AS lon, sop.position_id, ai.validtime_from, ai.validtime_to, round(st_z(sop.stationary_position)::numeric, 2) AS height_above_mean_sea_level, sop.barometer_height \
 FROM wmo_station_identity_view ai, stationary_observation_place_view sop, position_view p \
-WHERE ai.position_id = sop.position_id AND sop.position_id = p.position_id) AS diana_wmo_station_view \
+WHERE ai.wmo_station_type_code = 1 AND ai.position_id = sop.position_id AND sop.position_id = p.position_id) AS diana_wmo_station_view \
 WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.isoTime(true,true).c_str(), wmo_block, wmo_station);
 						//sprintf(query, "select * from kvalobs_wmo_station_view where validtime_to>'%s' and wmo_block=%d and wmo_number=%d;", (char *)obstime_.isoTime(true,true).c_str(), wmo_block, wmo_station);
 #ifdef DEBUGSQL
@@ -1047,12 +1034,36 @@ WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;", (char *)obstime_.i
 					// Expand!
 					reftime_begin.addHour(-3);
 					reftime_end.addHour(3);
+// Backward compatibility, will bee removed later
+if (read_old_radiosonde_tables_) {
 					sprintf(query, "SELECT * FROM \
 (SELECT wmo.wmo_block_number AS wmo_block, wmo.wmo_station_number AS wmo_number, wmo.position_id, round(val.lat::numeric, 2) AS lat, round(val.lon::numeric, 2) AS lon, ctx.parameter_id, val.level_parameter_id, val.level_from, val.level_to, lp.unit_name AS level_parameter_unit_name, f.statistics_formula_name AS statistics_type, val.observation_value AS value, par.parameter_unit AS parameter_unit, val.quality, val.station_operating_mode AS automation_code, val.time_tick AS reference_time, val.time_tick - val.offset_from_time_tick - ctx.observation_sampling_time AS valid_from, val.time_tick - val.offset_from_time_tick AS valid_to, val.observation_master_id, val.time_tick, date_part('epoch'::text, ctx.observation_sampling_time) AS observation_sampling_time_seconds, date_part('epoch'::text, val.offset_from_time_tick) AS offset_from_time_tick_seconds, val.value_version_number \
 FROM wmo_station_identity_view wmo, aerosond_observation_value_view val, aerosond_observation_value_context_view ctx, statistics_formula_view f, parameter_view par, level_parameter_view lp \
 WHERE wmo.position_id = ctx.position_id AND val.observation_master_id = ctx.observation_master_id AND f.statistics_formula_id = ctx.statistics_formula_id AND par.parameter_id = ctx.parameter_id AND lp.level_parameter_id = val.level_parameter_id) \
 AS diana_aerosond_observation_wiew where position_id in (%s) and parameter_id in(%s) and reference_time >= '%s' and reference_time <= '%s';",
 							(char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(), parameters, (char *)reftime_begin.isoTime(true,true).c_str(), (char *)reftime_end.isoTime(true,true).c_str());
+} else {							
+							sprintf(query,
+"SELECT wsi.wmo_block_number AS wmo_block, wsi.wmo_station_number AS wmo_number,wsi.position_id, \
+round(st_y((unnest(observation_value_array)).measuring_position)::numeric,2) as lat, round(st_x((unnest(observation_value_array)).measuring_position)::numeric,2) as long, \
+rovc.parameter_id, rova.level_parameter_id,(unnest(observation_value_array)).level_from, (unnest(observation_value_array)).level_to, \
+level_parameter_view.unit_name AS level_parameter_unit_name,statistics_formula_view.statistics_formula_name AS statistics_type, \
+(unnest(observation_value_array)).observation_value,parameter_unit,(unnest(observation_value_array)).nordklim_quality_control as quality, \
+station_operating_mode AS automation_code, rova.time_tick AS reference_time, \
+rova.time_tick - rova.offset_from_time_tick - observation_sampling_time AS valid_from, \
+rova.time_tick - rova.offset_from_time_tick AS valid_to, \
+observation_master_id, rova.time_tick, date_part('epoch'::text, observation_sampling_time) AS observation_sampling_time_seconds, \
+date_part('epoch'::text, rova.offset_from_time_tick) AS offset_from_time_tick_seconds, rova.value_version_number \
+  FROM wmo_station_identity_view wsi \
+  JOIN radiosonde_stationary_launch USING (position_id) \
+  JOIN radiosonde_observation_value_context rovc USING (radiosonde_launch_id) \
+  JOIN parameter_view USING (parameter_id) \
+  JOIN radiosonde_observation_value_array rova USING (observation_master_id) \
+  JOIN level_parameter_view USING (level_parameter_id) \
+  JOIN statistics_formula_view USING (statistics_formula_id) \
+  WHERE position_id in (%s) AND parameter_id in (%s) AND time_tick = '%s';",
+  (char *)diStation::dataproviders[stationfile_][(*stations)[i].stationID()].c_str(),parameters,(char *)obstime_.isoTime(true,true).c_str());
+}
 #ifdef DEBUGSQL
 					cerr << "query: " << query << endl;
 #endif
@@ -1169,6 +1180,7 @@ AS diana_aerosond_observation_wiew where position_id in (%s) and parameter_id in
 										cerr << "Param: " << (*params)[k].diananame() << " value: " << crow.integervalue << endl;
 #endif
 									tmpresult.push_back(crow);
+									break;
 								}
 							}
 						}
@@ -1208,7 +1220,7 @@ AS diana_aerosond_observation_wiew where position_id in (%s) and parameter_id in
 				}
 				ftime(&tend);
 				//fprintf(stderr, "populate took %6.4f  CPU seconds, %d rows retrieved\n",((double)(end-start)/CLOCKS_PER_SEC), nTmpRows);
-#ifdef DEBUGPTINT
+#ifdef DEBUGPRINT
 				fprintf(stderr, "station: %i, get data from newark took %6.4f  seconds, %d rows retrieved\n",(*stations)[i].wmonr(),((double)((tend.time*1000 + tend.millitm) - (tstart.time*1000 + tstart.millitm))/1000), nTmpRows);
 #endif
 				// here, we should add the result to cache
@@ -1268,7 +1280,6 @@ AS diana_aerosond_observation_wiew where position_id in (%s) and parameter_id in
 #endif
 	return 0;
 }
-
 int road::Roaddata::close()
 {
 	return 0;
