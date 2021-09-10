@@ -1055,10 +1055,10 @@ rova.time_tick - rova.offset_from_time_tick AS valid_to, \
 observation_master_id, rova.time_tick, date_part('epoch'::text, observation_sampling_time) AS observation_sampling_time_seconds, \
 date_part('epoch'::text, rova.offset_from_time_tick) AS offset_from_time_tick_seconds, rova.value_version_number \
   FROM wmo_station_identity_view wsi \
-  JOIN radiosonde_stationary_launch USING (position_id) \
-  JOIN radiosonde_observation_value_context rovc USING (radiosonde_launch_id) \
+  JOIN radiosonde_stationary_launch_view USING (position_id) \
+  JOIN radiosonde_observation_value_array_context_view rovc USING (radiosonde_launch_id) \
   JOIN parameter_view USING (parameter_id) \
-  JOIN radiosonde_observation_value_array rova USING (observation_master_id) \
+  JOIN radiosonde_observation_value_array_view rova USING (observation_master_id) \
   JOIN level_parameter_view USING (level_parameter_id) \
   JOIN statistics_formula_view USING (statistics_formula_id) \
   WHERE position_id in (%s) AND parameter_id in (%s) AND time_tick = '%s';",
