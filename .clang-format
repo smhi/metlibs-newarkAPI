@@ -1,0 +1,122 @@
+#Diana... metlibs newark SMHI
+BasedOnStyle: LLVM
+AccessModifierOffset: -2
+AlignAfterOpenBracket: DontAlign
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments: None
+AlignConsecutiveBitFields: None
+AlignConsecutiveDeclarations: None
+AlignConsecutiveMacros: None
+AlignEscapedNewlines: Left
+AlignOperands: DontAlign
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: false
+AllowAllConstructorInitializersOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All #All, InlineOnly
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All # Empty All
+AllowShortLoopsOnASingleLine: false #true
+AlwaysBreakAfterReturnType: None #None TopLevel
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: MultiLine
+#AttributeMacros: ['']
+BinPackArguments: true
+BinPackParameters: true
+BitFieldColonSpacing: Both
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: true
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterExternBlock: false
+  AfterFunction: true
+  AfterNamespace: false
+  AfterObjCDeclaration: false
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: false #true for QT, false for common.
+  BeforeElse: false #true for QT, false for common.
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeComma #BeforeColon AfterColon
+BreakInheritanceList: BeforeComma #BeforeColon AfterColon
+BreakStringLiterals: true
+ColumnLimit: 120
+#ColumnLimit: 0 #
+#ColumnLimit: 94 #
+#ColumnLimit: 120 #
+#ColumnLimit: 160 # diana
+CompactNamespaces: false
+ContinuationIndentWidth: 2
+#DeriveLineEnding: bool
+#DerivePointerAlignment: bool
+EmptyLineAfterAccessModifier: Never #OR Never Leave
+EmptyLineBeforeAccessModifier: LogicalBlock #Or LogicalBlock or Leave
+FixNamespaceComments: true
+#ForEachMacros: ['']
+#IfMacros: ['']
+#IncludeBlocks: #Regroup
+#IncludeCategories:
+#  - Regex: '^'
+#    Priority: 1
+#    SortPriority: 1
+#    CaseSensitive: false
+IndentAccessModifiers: false
+IndentCaseLabels: false #true
+IndentExternBlock: NoIndent #Indent
+IndentGotoLabels: false
+IndentPPDirectives: None
+IndentWidth: 2
+#IndentWrappedFunctionNames: bool
+LambdaBodyIndentation: Signature #OuterScope Signature
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
+NamespaceIndentation: None # None OR All
+ObjCSpaceAfterProperty: false
+ObjCSpaceBeforeProtocolList: true
+#PPIndentWidth: 0
+PackConstructorInitializers: BinPack
+PointerAlignment: Left # Middle
+#QualifierOrder: [ 'static', 'const', 'inline', 'constexpr', 'restrict', 'type', 'volatile' ]
+# The placement of a storage-class specifier other than at the beginning of the declaration
+# specifiers in a declaration is an obsolescent feature.
+ReferenceAlignment: Left # Middle
+ReflowComments: true
+#SeparateDefinitionBlocks: Leave # Always
+SortIncludes: CaseSensitive
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: true
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true # false
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles: false #Never
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInLineCommentPrefix:
+  Maximum: 2
+  Minimum: 2
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+TabWidth: 2
+UseTab: Never

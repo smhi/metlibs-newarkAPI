@@ -29,88 +29,99 @@
   51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-
-
-
 #ifndef diRoaddata_h
 #define diRoaddata_h
 
-#include <vector>
-#include <map>
-#include <string>
-#include <puTools/miTime.h>
-#include <puTools/miStringFunctions.h>
-#include "diStation.h"
 #include "diParam.h"
 #include "diRoaddatathread.h"
+#include "diStation.h"
 #include "rdkESQLTypes.h"
+#include <map>
+#include <puTools/miStringFunctions.h>
+#include <puTools/miTime.h>
+#include <string>
+#include <vector>
 
-// the class definition here...
-using namespace std;
+//  the class definition here...
+//  using namespace std;
 using namespace miutil;
-//using namespace pgpool;
+//  using namespace pgpool;
 
-namespace road {
+namespace road
+{
   /**
    * \addtogroup  dbinterface
    *
    * @{
-   */  
+   */
 
   /**
    * \brief Interface for getting data from the road database..
    */
 
+  class Roaddata
+  {
+  private:
+    static std::string host;
+    static std::string port;
+    static std::string dbname;
+    static std::string user;
+    static std::string passwd;
+    static std::string connect_str;
+    std::string databasefile_;
+    std::string stationfile_;
+    std::string parameterfile_;
+    miTime obstime_;
+    std::vector<diStation> * stations;
+    std::vector<diParam> * params;
+    std::set<int> * roadparams;
 
-class Roaddata {
-private:
-	static string host;
-	static string port;
-	static string dbname;
-	static string user;
-	static string passwd;
-	static std::string connect_str;
-	string databasefile_;
-	string stationfile_;
-	string parameterfile_;
-	miTime obstime_;
-	vector<diStation> * stations;
-	vector <diParam> * params;
-	std::set<int> * roadparams;
-	
-public:
+  public:
     static bool initDone;
-	static bool read_old_radiosonde_tables_;
-	static int initRoaddata(const string &databasefile);
-	// getStationList must be called after initRoaddata has been done, if not, there will be no connect information.
-	// Maybe this should be fixed in the future ?
-	static int getStationList(string & inquery, vector <diStation> * & stations, const string &station_type);
-	//static DbConnectionPoolPtr thePool;
+    static bool read_old_radiosonde_tables_;
+    static int initRoaddata(const std::string & databasefile);
+    //  getStationList must be called after initRoaddata has been done, if not,
+    //  there will be no connect information. Maybe this should be fixed in the
+    //  future ?
+    static int getStationList(std::string & inquery, std::vector<diStation> *& stations,
+      const std::string & station_type);
+    //  static DbConnectionPoolPtr thePool;
 
-	// this map maps an obstime to a map from wmo no to a data string.
-	// the second map contains data strings only if there are rows returned 
-	// from road.
-	// We must map to stationfile also for ground observations and in the future also aerosond data
-	static map<std::string, map<miTime, map<int, string > > > road_data_cache;
-	// depricated
-	static map<miTime, map<int, string > > road_cache;
-	// The cache for aerosond data
-	static map<std::string, map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > > road_data_multi_cache;
-	static map<miTime, map<int, vector<RDKCOMBINEDROW_2 > > > road_multi_cache;
-	//default constructor
-	Roaddata() {}
-	
-// the constructor, it inits the databasesetting, includeing login and password
-	Roaddata(const string &databasefile, const string &stationfile, const string &parameterfile, const miTime &obstime);
+    //  this map maps an obstime to a map from wmo no to a data string.
+    //  the second map contains data strings only if there are rows returned
+    //  from road.
+    //  We must map to stationfile also for ground observations and in the future
+    //  also aerosond data
+    static std::map<std::string, std::map<miTime, std::map<int, std::string>>>
+      road_data_cache;
+    //  depricated
+    static std::map<miTime, std::map<int, std::string>> road_cache;
+    //  The cache for aerosond data
+    static std::map<std::string,
+      std::map<miTime, std::map<int, std::vector<RDKCOMBINEDROW_2>>>>
+      road_data_multi_cache;
+    static std::map<miTime, std::map<int, std::vector<RDKCOMBINEDROW_2>>> road_multi_cache;
+    //  default constructor
+    Roaddata()
+    {}
+
+    //  the constructor, it inits the databasesetting, includeing login and
+    //  password
+    Roaddata(const std::string & databasefile, const std::string & stationfile,
+      const std::string & parameterfile, const miTime & obstime);
     ~Roaddata();
-	int open();
-	int getData(const vector<int> & index_stations_to_plot, map<int, string> & lines);
-	//int getData(const vector<diStation> & stations_to_plot, map<int, vector<RDKCOMBINEDROW_2 > > & raw_data_map);
-	int getRadiosondeData(const vector<diStation> & stations_to_plot, map<int, vector<RDKCOMBINEDROW_2 > > & raw_data_map);
-	int initData(const vector<string> & parameternames, map<int, string> & lines);
-	int close();
-};
+    int open();
+    int getData(const std::vector<int> & index_stations_to_plot,
+      std::map<int, std::string> & lines);
+    //  int getData(const std::vector<diStation> & stations_to_plot, std::map<int,
+    //  std::vector<RDKCOMBINEDROW_2 > > & raw_data_map);
+    int getRadiosondeData(const std::vector<diStation> & stations_to_plot,
+      std::map<int, std::vector<RDKCOMBINEDROW_2>> & raw_data_map);
+    int initData(const std::vector<std::string> & parameternames,
+      std::map<int, std::string> & lines);
+    int close();
+  };
 
-}
+}  //  namespace road
 
 #endif

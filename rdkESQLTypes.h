@@ -6,8 +6,8 @@
  * Works as mirrors for the SQL rowtypes
  * Valid for RDK 1.3
  *
- *  Revised by          date            comment
- *	PH					2003-01-21		Added definition for NULL
+ *  Revised by   date      comment
+ *	PH 2003-01-21	Added definition for NULL
  *
  */
 
@@ -15,11 +15,10 @@
 #ifndef _rdkESQLTypes_h_
 #define _rdkESQLTypes_h_
 
-const int MAX_NUM_THREADS=10;
+const int MAX_NUM_THREADS = 10;
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 #ifndef WIN32
 #ifndef __cplusplus
@@ -49,7 +48,7 @@ typedef int bool;
 #ifndef _STATISTICSTYPE_STR_SIZE
 #define _STATISTICSTYPE_STR_SIZE 17
 #endif
-  // the _GEOPOINT_STR_SIZE is only approximative, let it be 64 for now
+//  the _GEOPOINT_STR_SIZE is only approximative, let it be 64 for now
 #ifndef _GEOPOINT_STR_SIZE
 #define _GEOPOINT_STR_SIZE 64
 #endif
@@ -60,13 +59,12 @@ typedef int bool;
 #define _QUALITY_STR_SIZE 16
 #endif
 
-
 typedef struct geoPoint {
-    double lat;
-    double lon;
+  double lat;
+  double lon;
 } GEOPOINT;
 
-typedef struct RDKCombinedRow_2{
+typedef struct RDKCombinedRow_2 {
   int integervalue;
   bool integervalue_is_null;
   double floatvalue;
@@ -94,39 +92,38 @@ typedef struct RDKCombinedRow_2{
   char statisticstype[_STATISTICSTYPE_STR_SIZE];
 } RDKCOMBINEDROW_2;
 
-typedef struct NEWARKCombinedRow_2{
-
- /*--search citerias
- wmo.wmo_block_number AS wmo_block, 
- wmo.wmo_station_number AS wmo_number,*/
- long position_id;
- double lat;
- double lon;
- int parameter_id; 
- int level_parameter_id;
- double level_from;
- double level_to;
- char level_parameter_unit_name[_UNIT_STR_SIZE];
- char statistics_type[_STATISTICSTYPE_STR_SIZE];
- double value; 
- char unit[_UNIT_STR_SIZE];
- char quality[_QUALITY_STR_SIZE];
-/*-- val.station_operating_mode AS automation_code */ 
- char reference_time[_DATETIME_STR_SIZE]; 
- char valid_from[_DATETIME_STR_SIZE]; 
- char valid_to[_DATETIME_STR_SIZE];
-/*-- the unique adress to the value is the next 4 columns*/
- long observation_master_id;
- char time_tick[_DATETIME_STR_SIZE];
- char observation_sampling_time[_DATETIME_STR_SIZE];
- char offset_from_time_tick[_DATETIME_STR_SIZE];
- int value_version_number;
+typedef struct NEWARKCombinedRow_2 {
+  /*--search citerias
+  wmo.wmo_block_number AS wmo_block,
+  wmo.wmo_station_number AS wmo_number,*/
+  long position_id;
+  double lat;
+  double lon;
+  int parameter_id;
+  int level_parameter_id;
+  double level_from;
+  double level_to;
+  char level_parameter_unit_name[_UNIT_STR_SIZE];
+  char statistics_type[_STATISTICSTYPE_STR_SIZE];
+  double value;
+  char unit[_UNIT_STR_SIZE];
+  char quality[_QUALITY_STR_SIZE];
+  /*-- val.station_operating_mode AS automation_code */
+  char reference_time[_DATETIME_STR_SIZE];
+  char valid_from[_DATETIME_STR_SIZE];
+  char valid_to[_DATETIME_STR_SIZE];
+  /*-- the unique adress to the value is the next 4 columns*/
+  long observation_master_id;
+  char time_tick[_DATETIME_STR_SIZE];
+  char observation_sampling_time[_DATETIME_STR_SIZE];
+  char offset_from_time_tick[_DATETIME_STR_SIZE];
+  int value_version_number;
 
 } NEWARKCOMBINEDROW_2;
 
-
-  //"row('Geopoint((%f,%f),(%f,%f),(%s,%s))'::geoobject,%d::RDKoriginGeoIndex)::RDKGeoobjectRow_2" % (
-  //                  lat, long, altrbegin, altrend, validtime_start, validtime_end, stationid
+//"row('Geopoint((%f,%f),(%f,%f),(%s,%s))'::geoobject,%d::RDKoriginGeoIndex)::RDKGeoobjectRow_2"
+//% (lat, long, altrbegin, altrend, validtime_start,
+//                  validtime_end, stationid
 
 typedef struct geoObjectRow {
   GEOPOINT geop[_MAX_CORNERS];
@@ -141,6 +138,5 @@ typedef struct geoObjectRow {
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif
