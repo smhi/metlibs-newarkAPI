@@ -149,9 +149,9 @@ retry:
   try {
     theConn = new connection(connect_str);
   }
-  catch (pqxx_exception & e) {
+  catch (failure & e) {
     std::cerr << "Roaddata::getStationList(), Connection to db failed! no = " << retries
-              << ", " << e.base().what() << std::endl;
+              << ", " << e.what() << std::endl;
 
     if (retries >= 10) {
       std::cerr << "Roaddata::getStationList(), Connection to db failed!, "
@@ -317,9 +317,9 @@ retry:
       }
     }
   }
-  catch (const pqxx::pqxx_exception & e) {
-    std::cerr << "Roaddata::getStationList(), failed! " << e.base().what() << std::endl;
-    const pqxx::sql_error * s = dynamic_cast<const pqxx::sql_error *>(&e.base());
+  catch (const pqxx::failure & e) {
+    std::cerr << "Roaddata::getStationList(), failed! " << e.what() << std::endl;
+    const pqxx::sql_error * s = dynamic_cast<const pqxx::sql_error *>(&e);
     if (s)
       std::cerr << "Query was: " << s->query() << std::endl;
     else
@@ -327,7 +327,7 @@ retry:
 #ifdef DEBUGPRINT
     std::cerr << "++ Roaddata::getStationList() done ++" << std::endl;
 #endif
-    theConn->disconnect();
+    //theConn->disconnect();
     delete theConn;
     theConn = NULL;
     return 1;
@@ -339,13 +339,13 @@ retry:
 #ifdef DEBUGPRINT
     std::cerr << "++ Roaddata::getStationList() done ++" << std::endl;
 #endif
-    theConn->disconnect();
+    //theConn->disconnect();
     delete theConn;
     theConn = NULL;
     return 1;
   }
 
-  theConn->disconnect();
+  //theConn->disconnect();
   delete theConn;
   theConn = NULL;
 #ifdef DEBUGPRINT
@@ -829,9 +829,9 @@ retry:
   try {
     theConn = new connection(connect_str);
   }
-  catch (pqxx_exception & e) {
+  catch (failure & e) {
     std::cerr << "Roaddata::getData(), Connection to db failed! no = " << retries << ", "
-              << e.base().what() << std::endl;
+              << e.what() << std::endl;
 #ifdef DEBUGPRINT
     std::cerr << "++ Roaddata::getData() done ++" << std::endl;
 #endif
@@ -954,10 +954,10 @@ WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;",
 
             //  If we get here, work is committed
           }
-          catch (const pqxx::pqxx_exception & e) {
-            std::cerr << "Roaddata::run(), Getting placeid failed! " << e.base().what()
+          catch (const pqxx::failure & e) {
+            std::cerr << "Roaddata::run(), Getting placeid failed! " << e.what()
                       << std::endl;
-            const pqxx::sql_error * s = dynamic_cast<const pqxx::sql_error *>(&e.base());
+            const pqxx::sql_error * s = dynamic_cast<const pqxx::sql_error *>(&e);
             if (s)
               std::cerr << "Query was: " << s->query() << std::endl;
             else
@@ -965,7 +965,7 @@ WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;",
 #ifdef DEBUGPRINT
             std::cerr << "++ Roaddata::getData() done ++" << std::endl;
 #endif
-            theConn->disconnect();
+            //theConn->disconnect();
             delete theConn;
             theConn = NULL;
             return 1;
@@ -977,7 +977,7 @@ WHERE validtime_to>'%s' AND wmo_block=%d AND wmo_number=%d;",
 #ifdef DEBUGPRINT
             std::cerr << "++ Roaddata::getData() done ++" << std::endl;
 #endif
-            theConn->disconnect();
+            //theConn->disconnect();
             delete theConn;
             theConn = NULL;
             return 1;
@@ -1179,10 +1179,10 @@ date_part('epoch'::text, rova.offset_from_time_tick) AS offset_from_time_tick_se
             res.clear();
           }
         }
-        catch (const pqxx::pqxx_exception & e) {
-          std::cerr << "Roaddata::run(), Getting data failed! " << e.base().what()
+        catch (const pqxx::failure & e) {
+          std::cerr << "Roaddata::run(), Getting data failed! " << e.what()
                     << std::endl;
-          const pqxx::sql_error * s = dynamic_cast<const pqxx::sql_error *>(&e.base());
+          const pqxx::sql_error * s = dynamic_cast<const pqxx::sql_error *>(&e);
           if (s)
             std::cerr << "Query was: " << s->query() << std::endl;
           else
@@ -1190,7 +1190,7 @@ date_part('epoch'::text, rova.offset_from_time_tick) AS offset_from_time_tick_se
 #ifdef DEBUGPRINT
           std::cerr << "++ Roaddata::getData() done ++" << std::endl;
 #endif
-          theConn->disconnect();
+          //theConn->disconnect();
           delete theConn;
           theConn = NULL;
           return 1;
@@ -1202,7 +1202,7 @@ date_part('epoch'::text, rova.offset_from_time_tick) AS offset_from_time_tick_se
 #ifdef DEBUGPRINT
           std::cerr << "++ Roaddata::getData() done ++" << std::endl;
 #endif
-          theConn->disconnect();
+          //theConn->disconnect();
           delete theConn;
           theConn = NULL;
           return 1;
@@ -1237,7 +1237,7 @@ date_part('epoch'::text, rova.offset_from_time_tick) AS offset_from_time_tick_se
       }  //  END toplot
     }    //  END if data found
   }      //  END For noOfStations
-  theConn->disconnect();
+  //theConn->disconnect();
   delete theConn;
   theConn = NULL;
   //  what to do with the tmp_map and road_cache

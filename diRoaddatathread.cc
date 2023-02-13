@@ -126,9 +126,9 @@ retry:
   try {
     theConn = new connection(connect_str);
   }
-  catch (pqxx_exception & e) {
+  catch (failure & e) {
     std::cerr << "Roaddatathread::run(), Connection to db failed! no = " << retries << ", "
-              << e.base().what() << std::endl;
+              << e.what() << std::endl;
 #ifdef DEBUGPRINT
     std::cerr << "++ Roaddatathread::run() done ++" << std::endl;
 #endif
@@ -350,10 +350,10 @@ retry:
               diStation::addDataProvider(stationfile_, (*stations)[i].stationID(),
                 std::string(place_id));
             }
-            catch (const pqxx::pqxx_exception & e) {
+            catch (const pqxx::failure & e) {
               std::cerr << "Roaddatathread::run(), Getting placeid failed! "
-                        << e.base().what() << std::endl;
-              const pqxx::sql_error * s = dynamic_cast<const pqxx::sql_error *>(&e.base());
+                        << e.what() << std::endl;
+              const pqxx::sql_error * s = dynamic_cast<const pqxx::sql_error *>(&e);
               if (s)
                 std::cerr << "Query was: " << s->query() << std::endl;
               else
@@ -361,7 +361,7 @@ retry:
 #ifdef DEBUGPRINT
               std::cerr << "++ Roaddatathread::run() done ++" << std::endl;
 #endif
-              theConn->disconnect();
+              //theConn->disconnect();
               delete theConn;
               theConn = NULL;
               stop = true;
@@ -374,7 +374,7 @@ retry:
 #ifdef DEBUGPRINT
               std::cerr << "++ Roaddatathread::run() done ++" << std::endl;
 #endif
-              theConn->disconnect();
+              //theConn->disconnect();
               delete theConn;
               theConn = NULL;
               stop = true;
@@ -919,10 +919,10 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
               res.clear();
             }
           }
-          catch (const pqxx::pqxx_exception & e) {
-            std::cerr << "Roaddatathread::run(), Getting data failed! " << e.base().what()
+          catch (const pqxx::failure & e) {
+            std::cerr << "Roaddatathread::run(), Getting data failed! " << e.what()
                       << std::endl;
-            const pqxx::sql_error * s = dynamic_cast<const pqxx::sql_error *>(&e.base());
+            const pqxx::sql_error * s = dynamic_cast<const pqxx::sql_error *>(&e);
             if (s)
               std::cerr << "Query was: " << s->query() << std::endl;
             else
@@ -930,7 +930,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 #ifdef DEBUGPRINT
             std::cerr << "++ Roaddatathread::run() done ++" << std::endl;
 #endif
-            theConn->disconnect();
+            //theConn->disconnect();
             delete theConn;
             theConn = NULL;
             stop = true;
@@ -943,7 +943,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
 #ifdef DEBUGPRINT
             std::cerr << "++ Roaddatathread::run() done ++" << std::endl;
 #endif
-            theConn->disconnect();
+            //theConn->disconnect();
             delete theConn;
             theConn = NULL;
             stop = true;
@@ -1028,7 +1028,7 @@ AS diana_ship_observation_wiew where sender_id in (%s) and parameter_id in(%s) a
     }
   }
   if (theConn != NULL) {
-    theConn->disconnect();
+    //theConn->disconnect();
     delete theConn;
     theConn = NULL;
   }
