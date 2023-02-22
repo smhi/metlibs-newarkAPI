@@ -11,20 +11,17 @@ lib_LTLIBRARIES = libnewarkAPI.la
 libnewarkAPI_la_SOURCES = diParam.cc diStation.cc diRoaddata.cc diRoaddatathread.cc
 
 libnewarkAPI_la_CPPFLAGS = \
-	${PQSQL_CPPFLAGS} \
 	${PQXX_CPPFLAGS} \
 	${PUTOOLS_CPPFLAGS} \
 	${BOOST_CPPFLAGS}
 
 if ENABLE_SHARED_LIBRARY
 libnewarkAPI_la_LDFLAGS = \
-	${PQSQL_LDFLAGS} \
 	${PQXX_LDFLAGS} \
 	${PUTOOLS_LDFLAGS} \
 	${BOOST_LDFLAGS}
 
 libnewarkAPI_la_LIBADD = \
-	${PQSQL_LIBS} \
 	${PQXX_LIBS} \
 	${PUTOOLS_LIBS} \
 	${BOOST_LIBS} \
